@@ -1,0 +1,14 @@
+export const envError = {
+  appEnv: "Le type d'environnement est requis.",
+  betterAuthSecret: "Le secret de better auth est requis.",
+  betterAuthUrl: "L'url du better auth est requis.",
+  databaseUrl: "L'url de la base de données est requis.",
+  port: "Le port du serveur est requis",
+  smtpHost: "L'hôte du serveur SMTP est requis",
+  smtpPort: "Le port du serveur SMTP est requis",
+  smtpSecure: "La sécurité du serveur SMTP est requise",
+  smtpUser: "L'utilisateur du serveur SMTP est requis",
+  smtpPass: "Le mot de passe du serveur SMTP est requis",
+  smtpFromAddress: "L'adresse email du serveur SMTP est requis",
+  smtpFromName: "Le nom du serveur SMTP est requis",
+};

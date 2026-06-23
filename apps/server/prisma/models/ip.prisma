@@ -1,0 +1,26 @@
+model Ip {
+    id         String    @id @default(cuid())
+    ip         String    @unique
+    banned     Boolean   @default(false)
+    banReason  String?
+    banExpires DateTime?
+    violations Int       @default(0)
+
+    users UserIp[]
+
+    @@map("ip")
+}
+
+model UserIp {
+    userId String
+    ipId   String
+
+    firstSeen DateTime @default(now())
+    lastSeen  DateTime @updatedAt
+
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+    ip   Ip   @relation(fields: [ipId], references: [id], onDelete: Cascade)
+
+    @@id([userId, ipId])
+    @@map("user_ip")
+}

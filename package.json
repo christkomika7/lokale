@@ -1,0 +1,27 @@
+{
+  "name": "lokale",
+  "dependencies": {
+    "@yolk-oss/elysia-env": "^3.0.1",
+    "zod": "^4.4.3"
+  },
+  "private": true,
+  "packageManager": "bun@1.3.14",
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "dev:server": "turbo run dev --filter=server",
+    "dev:web": "turbo run dev --filter=web",
+    "db:studio": "bun run --filter=server db:studio",
+    "db:migrate": "bun run --filter=server db:migrate ",
+    "db:generate": "bun run --filter=server db:generate",
+    "db:push": "bun run --filter=server db:push",
+    "lint": "turbo run lint"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "devDependencies": {
+    "turbo": "^2.9.15"
+  }
+}

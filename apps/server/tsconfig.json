@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "target": "ES2023",
+    "strict": true,
+    "esModuleInterop": true,
+    "jsx": "react-jsx",
+    "paths": {
+      "@lokale/config/*": ["../../packages/config/*"],
+      "@lokale/types/*": ["../../packages/types/*"],
+      "@lokale/lib/*": ["../../packages/lib/*"]
+    }
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "name": "server",
+  "version": "1.0.50",
+  "scripts": {
+    "dev": "bun run --watch src/index.ts",
+    "build": "bun build src/index.ts --outdir dist",
+    "db:studio": "bunx --bun prisma studio",
+    "db:migrate": "bunx --bun prisma migrate dev",
+    "db:generate": "bunx --bun prisma generate",
+    "db:update": "bunx --bun prisma migrate dev --name update && bunx --bun prisma generate",
+    "db:reset": "bunx --bun prisma migrate reset",
+    "db:push": "bunx --bun prisma push"
+  },
+  "dependencies": {
+    "@elysiajs/cors": "^1.4.2",
+    "@prisma/adapter-pg": "^7.8.0",
+    "@prisma/client": "^7.8.0",
+    "@react-email/components": "^1.0.12",
+    "@react-email/render": "^2.0.8",
+    "@sinclair/typebox": "^0.34.49",
+    "@yolk-oss/elysia-env": "^3.0.1",
+    "better-auth": "^1.6.11",
+    "date-fns": "^4.4.0",
+    "dotenv": "^17.4.2",
+    "elysia": "latest",
+    "nodemailer": "^8.0.9",
+    "pg": "^8.21.0",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "@types/nodemailer": "^8.0.0",
+    "@types/pg": "^8.20.0",
+    "@types/react": "^19.2.15",
+    "@types/react-dom": "^19.2.3",
+    "bun-types": "latest",
+    "prisma": "^7.8.0",
+    "tsx": "^4.22.3",
+    "typescript": "^6.0.3"
+  },
+  "type": "module"
+}

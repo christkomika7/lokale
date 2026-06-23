@@ -1,0 +1,25 @@
+model User {
+    id            String  @id
+    role          Role    @default(USER)
+    firstname     String
+    lastname      String
+    name          String
+    email         String
+    emailVerified Boolean @default(false)
+    image         String?
+
+    banned     Boolean   @default(false)
+    banReason  String?
+    banExpires DateTime?
+
+    sessions Session[]
+    accounts Account[]
+
+    ips UserIp[]
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@unique([email])
+    @@map("user")
+}
