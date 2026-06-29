@@ -12,6 +12,7 @@ import "../globals.css";
 import { BanBanner } from "#/components/alert/ban-banner";
 import { useBanWatcher } from "#/hook/use-ban-watcher";
 import type { RouterContext } from "#/types/context";
+import { Toaster } from "#/components/ui/sonner";
 
 export const Route = createRootRouteWithContext<RouterContext>()({
   component: RootComponent,
@@ -35,7 +36,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 });
 
 function RootComponent() {
-  useBanWatcher();
+  // useBanWatcher();
   return (
     <>
       <HeadContent />
@@ -46,6 +47,7 @@ function RootComponent() {
       >
         <TooltipProvider>
           <div className="grid grid-rows-[auto_1fr] min-h-svh">
+            <Toaster />
             <BanBanner />
             <Outlet />
           </div>

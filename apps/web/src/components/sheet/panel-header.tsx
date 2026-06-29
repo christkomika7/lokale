@@ -1,11 +1,11 @@
 import { initials } from "#/lib/utils";
-import type { AdminUsers } from "#/types/user";
+import type { User } from "@lokale/types/user";
 import { AlertTriangle, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Badge } from "../ui/badge";
 
 interface PanelHeaderProps {
-  user: AdminUsers;
+  user: User;
   editAction?: () => void;
   closeAction?: () => void;
 }

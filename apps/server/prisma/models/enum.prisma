@@ -3,3 +3,69 @@ enum Role {
     USER
     WORKSPACE
 }
+
+enum PlanCode {
+    FREE
+    PRO
+    BUSINESS
+}
+
+enum BillingPeriod {
+    MONTHLY
+    YEARLY
+}
+
+enum SubscriptionStatus {
+    ACTIVE
+    EXPIRED
+    CANCELLED
+    PENDING_PAYMENT
+}
+
+enum ContentType {
+    PUBLICATION
+    SONDAGE
+    ANNONCE
+}
+
+enum FileKind {
+    IMAGE
+    VIDEO
+    DOCUMENT
+}
+
+enum ActionType {
+    COMMANDER
+    RECRUTER
+}
+
+enum ActionStatus {
+    OPEN
+    CLOSED
+    ARCHIVED
+}
+
+enum SubmissionStatus {
+    PENDING
+    ACCEPTED
+    REJECTED
+}
+
+enum CertificationTarget {
+    USER
+    BUSINESS
+}
+
+enum CertificationStatus {
+    NONE
+    PENDING
+    APPROVED
+    REJECTED
+}
+
+enum AddonKind {
+    STORAGE
+    PUBLICATION
+    SONDAGE
+    ANNONCE
+}

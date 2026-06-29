@@ -1,0 +1,36 @@
+model Addon {
+    id          String    @id @default(cuid())
+    kind        AddonKind
+    name        String
+    description String?
+    quantity    Int
+    priceFcfa   Int
+
+    purchases AddonPurchase[]
+
+    isActive Boolean @default(true)
+
+    @@map("addon")
+}
+
+model AddonPurchase {
+    id String @id @default(cuid())
+
+    userId String
+    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    addonId String
+    addon   Addon  @relation(fields: [addonId], references: [id])
+
+    subscriptionId String?
+    subscription   Subscription? @relation(fields: [subscriptionId], references: [id])
+
+    quantity    Int       @default(1)
+    priceFcfa   Int
+    purchasedAt DateTime  @default(now())
+    expiresAt   DateTime?
+
+    payment Payment?
+
+    @@map("addon_purchase")
+}

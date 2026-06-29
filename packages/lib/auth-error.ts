@@ -7,6 +7,9 @@ export const AUTH_ERROR_MESSAGES: Record<string, string> = {
   FAILED_TO_CREATE_USER: "Impossible de créer le compte. Réessayez.",
   FAILED_TO_CREATE_SESSION:
     "Compte créé mais connexion échouée. Connectez-vous manuellement.",
+  USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL:
+    "Cette adresse email est deja utilisée.",
+  PHONE_ALREADY_EXISTS: "Un compte existe déjà avec ce numéro de téléphone.",
 
   // ── Sign in ────────────────────────────────────────────────────────────────
   INVALID_EMAIL_OR_PASSWORD: "Email ou mot de passe incorrect.",

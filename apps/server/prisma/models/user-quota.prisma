@@ -1,0 +1,23 @@
+model UsageQuota {
+    id String @id @default(cuid())
+
+    subscriptionId String
+    subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+    periodStart DateTime
+    periodEnd   DateTime
+
+    storageUsedMb    Int @default(0)
+    publicationsUsed Int @default(0)
+    sondagesUsed     Int @default(0)
+    annoncesUsed     Int @default(0)
+    actionsUsed      Int @default(0)
+
+    bonusStorageMb    Int @default(0)
+    bonusPublications Int @default(0)
+    bonusSondages     Int @default(0)
+    bonusAnnonces     Int @default(0)
+
+    @@unique([subscriptionId, periodStart])
+    @@map("usage_quota")
+}

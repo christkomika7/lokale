@@ -17,7 +17,7 @@ import {
 import { authClient } from "#/lib/auth-client";
 import { signInSchema } from "@lokale/lib/validator/auth";
 import { secureAuth } from "#/lib/secure";
-import { Role } from "#/types/user";
+import { Role } from "@lokale/types/user";
 
 import Input from "#/components/input/input";
 import ErrorMessage from "#/components/message/error-message";

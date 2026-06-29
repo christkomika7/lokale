@@ -17,11 +17,8 @@ interface UsePaginatedQueryOptions {
   enabled?: boolean;
 }
 
-// const { items, hasNextPage, hasPreviousPage, nextPage, previousPage } =
-//   usePaginatedQuery<Venue>(["venues"], "/api/venues");
-
 export function usePaginatedQuery<TItem>(
-  queryKey: unknown[],
+  queryKey: string[],
   path: string,
   options?: UsePaginatedQueryOptions,
 ) {

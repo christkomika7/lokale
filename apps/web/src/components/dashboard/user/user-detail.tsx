@@ -1,5 +1,4 @@
 import { planCfg, roleCfg, statusCfg } from "#/config/admin/user";
-import type { AdminUsers } from "#/types/user";
 import {
   Activity,
   AlertTriangle,
@@ -22,14 +21,15 @@ import {
   UserX,
   XCircle,
 } from "lucide-react";
-import { Separator } from "../../../ui/separator";
-import Heading from "../../../typography/heading";
-import DetailField from "../../../ui/detail-field";
-import { Button } from "../../../ui/button";
+import { Separator } from "../../ui/separator";
+import Heading from "../../typography/heading";
+import DetailField from "../../ui/detail-field";
+import { Button } from "../../ui/button";
 import PanelHeader from "#/components/sheet/panel-header";
+import { UserStatus, type User } from "@lokale/types/user";
 
 interface UserDetailProps {
-  user: AdminUsers;
+  user: User;
   onClose: () => void;
   onEdit: () => void;
 }
@@ -160,25 +160,25 @@ export default function UserDetail({ user, onClose, onEdit }: UserDetailProps) {
               <Shield className="size-4 mr-2" />
               Changer le rôle
             </Button>
-            {user.status === "active" && (
+            {user.status === UserStatus.ACTIVE && (
               <Button variant="destructive">
                 <UserX className="size-4 mr-2" />
                 Suspendre l'utilisateur
               </Button>
             )}
-            {user.status === "suspended" && (
+            {user.status === UserStatus.SUSPENDED && (
               <Button variant="secondary">
                 <UserCheck className="size-4 mr-2" />
                 Réactiver l'utilisateur
               </Button>
             )}
-            {user.status !== "banned" && (
+            {user.status !== UserStatus.BANNED && (
               <Button variant="destructive">
                 <Ban className="size-4 mr-2" />
                 Bannir l'utilisateur
               </Button>
             )}
-            {user.status === "banned" && (
+            {user.status === UserStatus.BANNED && (
               <Button variant="secondary">
                 <UserCheck className="size-4 mr-2" />
                 Lever le bannissement

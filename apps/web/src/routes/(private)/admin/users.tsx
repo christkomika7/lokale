@@ -1,24 +1,21 @@
 import { createFileRoute } from "@tanstack/react-router";
-import UserSheet from "#/components/dashboard/user/sheet/user-sheet";
-import UsersTable from "#/components/table/admin/user";
-import Filter from "#/components/dashboard/filter";
-import {
-  Plan,
-  Role,
-  UserStatus,
-  type AdminUsers,
-  type UserFormData,
-} from "#/types/user";
+import { Plan, Role, UserStatus, type User } from "@lokale/types/user";
 import {
   createColumnHelper,
   getCoreRowModel,
-  getFilteredRowModel,
-  getSortedRowModel,
   useReactTable,
-  type ColumnFiltersState,
   type SortingState,
 } from "@tanstack/react-table";
 import { useMemo, useState } from "react";
+import { usePaginatedQuery } from "#/hook/use-paginated-query";
+import { formatDate, formatRelativeDate } from "@lokale/lib/date";
+
+import UsersTable from "#/components/table/admin/user";
+import Filter from "#/components/dashboard/filter";
+import { useDebouncedValue } from "#/hook/use-debounced-value";
+import PanelContainer from "#/components/sheet/panel-container";
+import UserDetail from "#/components/dashboard/user/user-detail";
+import UserForm from "#/components/dashboard/user/user-form";
 
 export const Route = createFileRoute("/(private)/admin/users")({
   component: RouteComponent,
@@ -26,196 +23,50 @@ export const Route = createFileRoute("/(private)/admin/users")({
 
 type PanelMode = "detail" | "create" | "edit";
 
-const INITIAL_USERS: AdminUsers[] = [
-  {
-    id: "u1",
-    name: "Princesse Moukala",
-    email: "p.moukala@gmail.com",
-    phone: "+242 06 123 4567",
-    avatar: "",
-    role: Role.USER,
-    status: UserStatus.ACTIVE,
-    plan: Plan.PRO,
-    country: "Congo",
-    city: "Brazzaville",
-    joinedAt: "2024-01-15",
-    lastSeen: "Il y a 3 min",
-    actions: 142,
-    emailVerified: true,
-    idVerified: true,
-    ips: ["197.243.12.4", "197.243.18.9"],
-    devices: ["iPhone 14", "Chrome / macOS"],
-    suspiciousActivity: false,
-  },
-  {
-    id: "u2",
-    name: "Jean-Baptiste Nkounkou",
-    email: "jb.nkounkou@outlook.com",
-    phone: "+242 05 987 6543",
-    avatar: "",
-    role: Role.WORKSPACE,
-    status: UserStatus.ACTIVE,
-    plan: Plan.BUSINESS,
-    country: "Congo",
-    city: "Pointe-Noire",
-    joinedAt: "2023-11-03",
-    lastSeen: "Il y a 1h",
-    actions: 389,
-    emailVerified: true,
-    idVerified: true,
-    ips: ["41.202.219.14"],
-    devices: ["Samsung S23", "Firefox / Windows"],
-    suspiciousActivity: false,
-  },
-  {
-    id: "u3",
-    name: "Arlette Massamba",
-    email: "a.massamba@yahoo.fr",
-    phone: "+242 06 456 7890",
-    avatar: "",
-    role: Role.USER,
-    status: UserStatus.SUSPENDED,
-    plan: Plan.FREE,
-    country: "Congo",
-    city: "Dolisie",
-    joinedAt: "2024-03-22",
-    lastSeen: "Il y a 2j",
-    actions: 28,
-    emailVerified: true,
-    idVerified: false,
-    ips: ["41.202.200.1"],
-    devices: ["Chrome / Android"],
-    suspiciousActivity: true,
-  },
-  {
-    id: "u4",
-    name: "Rodrigue Bokamba",
-    email: "r.bokamba@gmail.com",
-    phone: "+242 05 321 0987",
-    avatar: "",
-    role: Role.USER,
-    status: UserStatus.ACTIVE,
-    plan: Plan.PRO,
-    country: "Congo",
-    city: "Brazzaville",
-    joinedAt: "2023-08-10",
-    lastSeen: "Il y a 20 min",
-    actions: 891,
-    emailVerified: true,
-    idVerified: true,
-    ips: ["197.243.45.2", "197.243.12.4"],
-    devices: ["MacBook Pro", "iPhone 13"],
-    suspiciousActivity: false,
-  },
-  {
-    id: "u5",
-    name: "Christelle Loemba",
-    email: "c.loemba@gmail.com",
-    phone: "+242 06 654 3210",
-    avatar: "",
-    role: Role.USER,
-    status: UserStatus.BANNED,
-    plan: Plan.FREE,
-    country: "Congo",
-    city: "Pointe-Noire",
-    joinedAt: "2024-05-08",
-    lastSeen: "Il y a 14j",
-    actions: 7,
-    emailVerified: false,
-    idVerified: false,
-    ips: ["102.244.51.8"],
-    devices: ["Chrome / Windows"],
-    suspiciousActivity: true,
-  },
-  {
-    id: "u6",
-    name: "Serge Itoua",
-    email: "s.itoua@hotmail.com",
-    phone: "+242 05 111 2233",
-    avatar: "",
-    role: Role.WORKSPACE,
-    status: UserStatus.ACTIVE,
-    plan: Plan.BUSINESS,
-    country: "Congo",
-    city: "Brazzaville",
-    joinedAt: "2023-06-01",
-    lastSeen: "Il y a 5 min",
-    actions: 1204,
-    emailVerified: true,
-    idVerified: true,
-    ips: ["197.243.12.7"],
-    devices: ["iPad Pro", "Chrome / Windows"],
-    suspiciousActivity: false,
-  },
-  {
-    id: "u7",
-    name: "Mireille Nganga",
-    email: "m.nganga@gmail.com",
-    phone: "+242 06 778 9900",
-    avatar: "",
-    role: Role.USER,
-    status: UserStatus.PENDING,
-    plan: Plan.FREE,
-    country: "Congo",
-    city: "Nkayi",
-    joinedAt: "2025-01-02",
-    lastSeen: "Il y a 3j",
-    actions: 2,
-    emailVerified: false,
-    idVerified: false,
-    ips: ["41.202.210.5"],
-    devices: ["Safari / iPhone"],
-    suspiciousActivity: false,
-  },
-  {
-    id: "u8",
-    name: "Patrick Elenga",
-    email: "p.elenga@gmail.com",
-    phone: "+242 05 445 6677",
-    avatar: "",
-    role: Role.USER,
-    status: UserStatus.ACTIVE,
-    plan: Plan.PRO,
-    country: "Congo",
-    city: "Pointe-Noire",
-    joinedAt: "2023-12-14",
-    lastSeen: "Il y a 45 min",
-    actions: 267,
-    emailVerified: true,
-    idVerified: true,
-    ips: ["41.202.219.88"],
-    devices: ["Chrome / Linux"],
-    suspiciousActivity: false,
-  },
-];
+const SORT_FIELD_MAP: Record<string, "name" | "joinedAt" | "activity"> = {
+  name: "name",
+  joinedAt: "joinedAt",
+  lastSeen: "activity",
+};
 
-const columnHelper = createColumnHelper<AdminUsers>();
+const columnHelper = createColumnHelper<User>();
 
 function RouteComponent() {
-  const [users, setUsers] = useState<AdminUsers[]>(INITIAL_USERS);
-  const [globalFilter, setGlobalFilter] = useState("");
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 400);
+
   const [sorting, setSorting] = useState<SortingState>([
     { id: "joinedAt", desc: true },
   ]);
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [showFilters, setShowFilters] = useState(false);
 
   const [statusFilter, setStatusFilter] = useState<UserStatus | "all">("all");
   const [roleFilter, setRoleFilter] = useState<Role | "all">("all");
   const [planFilter, setPlanFilter] = useState<Plan | "all">("all");
 
-  const [selectedUser, setSelectedUser] = useState<AdminUsers | null>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [panelMode, setPanelMode] = useState<PanelMode>("detail");
   const [open, setOpen] = useState(false);
 
-  const effectiveColumnFilters = useMemo(() => {
-    const filters: ColumnFiltersState = [];
-    if (statusFilter !== "all")
-      filters.push({ id: "status", value: statusFilter });
-    if (roleFilter !== "all") filters.push({ id: "role", value: roleFilter });
-    if (planFilter !== "all") filters.push({ id: "plan", value: planFilter });
-    return filters;
-  }, [statusFilter, roleFilter, planFilter]);
+  const activeSort = sorting[0];
+  const sortBy = activeSort ? SORT_FIELD_MAP[activeSort.id] : undefined;
+  const sortOrder = activeSort?.desc ? "desc" : "asc";
+
+  const { items: users, isLoading } = usePaginatedQuery<User>(
+    ["admin-user"],
+    "/admin/users",
+    {
+      pageSize: 20,
+      params: {
+        search: debouncedSearch || undefined,
+        status: statusFilter !== "all" ? statusFilter : undefined,
+        role: roleFilter !== "all" ? roleFilter : undefined,
+        plan: planFilter !== "all" ? planFilter : undefined,
+        sortBy,
+        sortOrder,
+      },
+    },
+  );
 
   const columns = useMemo(
     () => [
@@ -223,7 +74,6 @@ function RouteComponent() {
         id: "name",
         header: "Utilisateur",
         enableSorting: true,
-        filterFn: "includesString",
       }),
       columnHelper.accessor("email", {
         id: "email",
@@ -233,30 +83,34 @@ function RouteComponent() {
       columnHelper.accessor("status", {
         id: "status",
         header: "Statut",
-        enableSorting: true,
-        filterFn: (row, id, value) => row.getValue(id) === value,
+        enableSorting: false,
       }),
       columnHelper.accessor("role", {
         id: "role",
         header: "Rôle",
-        enableSorting: true,
-        filterFn: (row, id, value) => row.getValue(id) === value,
+        enableSorting: false,
       }),
       columnHelper.accessor("plan", {
         id: "plan",
         header: "Plan",
-        enableSorting: true,
-        filterFn: (row, id, value) => row.getValue(id) === value,
+        enableSorting: false,
       }),
       columnHelper.accessor("actions", {
         id: "actions",
         header: "Actions",
-        enableSorting: true,
+        enableSorting: false,
       }),
       columnHelper.accessor("joinedAt", {
         id: "joinedAt",
         header: "Inscription",
         enableSorting: true,
+        cell: (info) => formatDate(info.getValue()),
+      }),
+      columnHelper.accessor("lastSeen", {
+        id: "lastSeen",
+        header: "Dernière activité",
+        enableSorting: true,
+        cell: (info) => formatRelativeDate(info.getValue()),
       }),
       columnHelper.accessor("city", {
         id: "city",
@@ -270,24 +124,12 @@ function RouteComponent() {
   const table = useReactTable({
     data: users,
     columns,
-    state: {
-      sorting,
-      columnFilters: effectiveColumnFilters,
-      globalFilter,
-    },
+    manualPagination: true,
+    manualSorting: true,
+    manualFiltering: true,
+    state: { sorting },
     onSortingChange: setSorting,
-    onGlobalFilterChange: setGlobalFilter,
     getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    globalFilterFn: (row, _colId, filterValue) => {
-      const q = String(filterValue).toLowerCase();
-      return (
-        row.original.name.toLowerCase().includes(q) ||
-        row.original.email.toLowerCase().includes(q) ||
-        row.original.city.toLowerCase().includes(q)
-      );
-    },
   });
 
   const rows = table.getRowModel().rows;
@@ -295,7 +137,7 @@ function RouteComponent() {
     (f) => f !== "all",
   ).length;
 
-  function handleSort(field: "name" | "actions" | "joinedAt") {
+  function handleSort(field: "name" | "actions" | "joinedAt" | "lastSeen") {
     const current = sorting[0];
     if (current?.id === field) {
       setSorting([{ id: field, desc: !current.desc }]);
@@ -304,7 +146,7 @@ function RouteComponent() {
     }
   }
 
-  function openDetail(user: AdminUsers) {
+  function openDetail(user: User) {
     setSelectedUser(user);
     setPanelMode("detail");
     setOpen(true);
@@ -316,38 +158,9 @@ function RouteComponent() {
     setOpen(true);
   }
 
-  function openEdit() {
-    setPanelMode("edit");
-    setOpen(true);
-  }
-
   function closePanel() {
     setSelectedUser(null);
     setOpen(false);
-  }
-
-  function handleSave(data: UserFormData) {
-    if (panelMode === "create") {
-      const newUser: AdminUsers = {
-        id: `u${Date.now()}`,
-        ...data,
-        avatar: "",
-        joinedAt: new Date().toISOString().split("T")[0],
-        lastSeen: "À l'instant",
-        actions: 0,
-        ips: [],
-        devices: [],
-        suspiciousActivity: false,
-      };
-      setUsers((prev) => [newUser, ...prev]);
-      closePanel();
-    } else if (panelMode === "edit" && selectedUser) {
-      setUsers((prev) =>
-        prev.map((u) => (u.id === selectedUser.id ? { ...u, ...data } : u)),
-      );
-      setSelectedUser((prev: any) => (prev ? { ...prev, ...data } : null));
-      setPanelMode("detail");
-    }
   }
 
   const sortField = sorting[0]?.id ?? "joinedAt";
@@ -356,15 +169,15 @@ function RouteComponent() {
     <div className="flex h-[calc(100vh-120px)] overflow-hidden">
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         <Filter
-          users={users}
-          globalFilter={globalFilter}
-          setGlobalFilter={setGlobalFilter}
+          globalFilter={search}
+          setGlobalFilter={setSearch}
           showFilters={showFilters}
           setShowFilters={setShowFilters}
           activeFilters={activeFilters}
           sortField={sortField}
           handleSort={handleSort}
           rows={rows}
+          users={users}
           openCreate={openCreate}
           setStatusFilter={setStatusFilter}
           setRoleFilter={setRoleFilter}
@@ -375,20 +188,27 @@ function RouteComponent() {
         />
         <UsersTable
           rows={rows}
+          isLoading={isLoading}
           selectedUser={selectedUser}
           openDetail={openDetail}
           closePanel={closePanel}
           panelMode={panelMode}
         />
       </div>
-      <UserSheet
+
+      <PanelContainer<User>
         open={open}
-        panelMode={panelMode}
-        selectedUser={selectedUser}
-        openEdit={openEdit}
-        closePanel={closePanel}
-        handleSave={handleSave}
-        setPanelMode={setPanelMode}
+        mode={panelMode}
+        data={selectedUser}
+        onClose={closePanel}
+        onModeChange={setPanelMode}
+        detail={(user, { toEdit, close }) => (
+          <UserDetail user={user} onEdit={toEdit} onClose={close} />
+        )}
+        edit={(user, { toDetail }) => (
+          <UserForm mode="edit" user={user} onClose={toDetail} />
+        )}
+        create={({ close }) => <UserForm mode="create" onClose={close} />}
       />
     </div>
   );

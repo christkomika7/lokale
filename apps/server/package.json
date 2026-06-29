@@ -9,7 +9,7 @@
     "db:generate": "bunx --bun prisma generate",
     "db:update": "bunx --bun prisma migrate dev --name update && bunx --bun prisma generate",
     "db:reset": "bunx --bun prisma migrate reset",
-    "db:push": "bunx --bun prisma push"
+    "db:push": "bunx --bun prisma db push && bunx --bun prisma generate"
   },
   "dependencies": {
     "@elysiajs/cors": "^1.4.2",
@@ -23,6 +23,7 @@
     "date-fns": "^4.4.0",
     "dotenv": "^17.4.2",
     "elysia": "latest",
+    "elysia-rate-limit": "^4.6.2",
     "nodemailer": "^8.0.9",
     "pg": "^8.21.0",
     "react": "^19.2.6",

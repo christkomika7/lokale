@@ -1,0 +1,28 @@
+model Business {
+    id      String @id @default(cuid())
+    ownerId String
+    owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+    name        String
+    description String?
+    logo        String?
+    coverImage  String?
+    sector      String?
+    address     String?
+    city        String?
+    phone       String?
+    email       String?
+
+    certificationStatus CertificationStatus @default(NONE)
+
+    subscriptions  Subscription[]
+    certifications Certification[]
+    publications   Publication[]
+    actions        Action[]
+    storageFiles   StorageFile[]
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@map("business")
+}

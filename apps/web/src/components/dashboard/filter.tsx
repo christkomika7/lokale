@@ -10,7 +10,7 @@ import { cn } from "#/lib/utils";
 import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
 import type { Row } from "@tanstack/react-table";
-import { Plan, Role, UserStatus, type AdminUsers } from "#/types/user";
+import { Plan, Role, UserStatus, type User } from "@lokale/types/user";
 import { planCfg, roleCfg, statusCfg } from "#/config/admin/user";
 import { sort, type SortKey } from "#/config/admin/filter";
 
@@ -19,7 +19,7 @@ import InputIcon from "../input/input-icon";
 import Dropdown from "../select/dropdown";
 
 interface FilterProps {
-  users: AdminUsers[];
+  users: User[];
   globalFilter: string;
   setGlobalFilter: (value: string) => void;
   showFilters: boolean;
@@ -27,7 +27,7 @@ interface FilterProps {
   activeFilters: number;
   sortField: string;
   handleSort: (value: "name" | "actions" | "joinedAt") => void;
-  rows: Row<AdminUsers>[];
+  rows: Row<User>[];
   openCreate: () => void;
   setStatusFilter: (value: UserStatus | "all") => void;
   setRoleFilter: (value: Role | "all") => void;
@@ -56,8 +56,8 @@ export default function Filter({
   planFilter,
 }: FilterProps) {
   return (
-    <Container>
-      <div className="py-4 border-b border-input dark:border-neutral-800 bg-white dark:bg-neutral-900 shrink-0">
+    <div className="py-4 border-b border-input dark:border-neutral-800 bg-white dark:bg-neutral-900 shrink-0">
+      <Container>
         <div className="flex items-center gap-3">
           <InputIcon
             icon={Search}
@@ -204,7 +204,7 @@ export default function Filter({
             </div>
           </div>
         )}
-      </div>
-    </Container>
+      </Container>
+    </div>
   );
 }

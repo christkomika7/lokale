@@ -1,9 +1,11 @@
 import { Avatar, AvatarFallback, AvatarImage } from "#/components/ui/avatar";
 import { Badge } from "#/components/ui/badge";
 import type { ColumnDef } from "#/components/ui/data-table";
+import EmptyData from "#/components/ui/empty-data";
 import { planCfg, roleCfg, statusCfg } from "#/config/admin/user";
 import { initials } from "#/lib/utils";
-import type { AdminUsers } from "#/types/user";
+import { formatDate } from "@lokale/lib/date";
+import type { User } from "@lokale/types/user";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -11,7 +13,7 @@ import {
   XCircle,
 } from "lucide-react";
 
-export const columns: ColumnDef<AdminUsers>[] = [
+export const columns: ColumnDef<User>[] = [
   {
     key: "user",
     label: "Utilisateur",
@@ -28,7 +30,7 @@ export const columns: ColumnDef<AdminUsers>[] = [
               </AvatarFallback>
             </Avatar>
             <span
-              className={`absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2 border-white dark:border-neutral-900 ${s.dot}`}
+              className={`absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2 border-white dark:border-neutral-900 ${s?.dot}`}
             />
           </div>
           <div className="min-w-0">
@@ -40,8 +42,10 @@ export const columns: ColumnDef<AdminUsers>[] = [
                 <AlertTriangle className="size-3 text-red-400 shrink-0" />
               )}
             </div>
-            <p className="text-[11px] text-neutral-400 dark:text-neutral-500">
-              {user.city}, {user.country}
+            <p className="text-[11px] text-neutral-400 dark:text-neutral-500 flex">
+              {user.city || <EmptyData length={6} />}
+              {user.city && user.country && ", "}
+              {user.country || <EmptyData length={6} />}
             </p>
           </div>
         </div>
@@ -64,7 +68,7 @@ export const columns: ColumnDef<AdminUsers>[] = [
             <XCircle className="size-3 text-red-400" />
           )}
           <p className="text-[11px] text-neutral-400 dark:text-neutral-500">
-            {user.lastSeen}
+            {formatDate(user.lastSeen, true)}
           </p>
         </div>
       </div>
@@ -78,7 +82,7 @@ export const columns: ColumnDef<AdminUsers>[] = [
       const s = statusCfg[user.status];
       return (
         <Badge className={s.badge}>
-          <span className={`size-1.5 rounded-full mr-1 ${s.dot}`} />
+          <span className={`size-1.5 rounded-full mr-1 ${s?.dot}`} />
           {s.label}
         </Badge>
       );

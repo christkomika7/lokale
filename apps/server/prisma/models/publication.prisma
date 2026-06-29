@@ -1,0 +1,22 @@
+model Publication {
+    id   String      @id @default(cuid())
+    type ContentType
+
+    authorId String
+    author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+    businessId String?
+    business   Business? @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+    title   String?
+    content String?
+
+    pollOptions Json?
+
+    files StorageFile[]
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@map("publication")
+}

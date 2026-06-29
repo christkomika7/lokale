@@ -1,0 +1,25 @@
+model Subscription {
+    id         String  @id @default(cuid())
+    userId     String
+    businessId String?
+
+    planId String
+    plan   Plan   @relation(fields: [planId], references: [id])
+
+    status    SubscriptionStatus @default(ACTIVE)
+    startDate DateTime           @default(now())
+    endDate   DateTime
+    autoRenew Boolean            @default(true)
+
+    user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+    business Business? @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+    quotas   UsageQuota[]
+    payments Payment[]
+
+    createdAt      DateTime        @default(now())
+    updatedAt      DateTime        @updatedAt
+    addonPurchases AddonPurchase[]
+
+    @@map("subscription")
+}

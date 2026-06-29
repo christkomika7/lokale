@@ -1,0 +1,22 @@
+model Certification {
+    id String @id @default(cuid())
+
+    target     CertificationTarget
+    userId     String?
+    businessId String?
+
+    user     User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    business Business? @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+    status     CertificationStatus @default(PENDING)
+    priceFcfa  Int
+    documents  Json?
+    reviewNote String?
+
+    requestedAt DateTime  @default(now())
+    reviewedAt  DateTime?
+
+    payment Payment?
+
+    @@map("certification")
+}

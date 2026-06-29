@@ -26,6 +26,13 @@ export const auth = betterAuth({
         type: "string",
         required: true,
       },
+      phone: { type: "string", required: false, fieldName: "phone" },
+      city: { type: "string", required: false, fieldName: "city" },
+      emailVerified: {
+        type: "boolean",
+        required: false,
+        fieldName: "emailVerified",
+      },
       role: {
         type: [$Enums.Role.ADMIN, $Enums.Role.USER, $Enums.Role.WORKSPACE],
         required: true,

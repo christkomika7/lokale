@@ -1,0 +1,24 @@
+model Payment {
+    id String @id @default(cuid())
+
+    userId String
+    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    subscriptionId String?
+    subscription   Subscription? @relation(fields: [subscriptionId], references: [id])
+
+    addonPurchaseId String?        @unique
+    addonPurchase   AddonPurchase? @relation(fields: [addonPurchaseId], references: [id])
+
+    certificationId String?        @unique
+    certification   Certification? @relation(fields: [certificationId], references: [id])
+
+    amountFcfa Int
+    provider   String
+    reference  String @unique
+    status     String
+
+    createdAt DateTime @default(now())
+
+    @@map("payment")
+}

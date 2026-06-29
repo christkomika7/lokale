@@ -1,0 +1,19 @@
+model StorageFile {
+    id     String   @id @default(cuid())
+    kind   FileKind
+    url    String
+    sizeMb Float
+
+    ownerId String
+    owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+    businessId String?
+    business   Business? @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+    publicationId String?
+    publication   Publication? @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+
+    createdAt DateTime @default(now())
+
+    @@map("storage_file")
+}

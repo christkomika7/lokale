@@ -5,21 +5,36 @@ model User {
     lastname      String
     name          String
     email         String
+    phone         String? @unique
     emailVerified Boolean @default(false)
+    idVerified    Boolean @default(false)
     image         String?
+
+    country String?
+    city    String?
 
     banned     Boolean   @default(false)
     banReason  String?
     banExpires DateTime?
 
-    sessions Session[]
-    accounts Account[]
+    lastSeenAt         DateTime?
+    suspiciousActivity Boolean   @default(false)
 
-    ips UserIp[]
+    subscriptions     Subscription[]
+    accounts          Account[]
+    sessions          Session[]
+    ips               UserIp[]
+    payments          Payment[]
+    certifications    Certification[]
+    businesses        Business[]
+    publications      Publication[]
+    storageFiles      StorageFile[]
+    actionSubmissions ActionSubmission[]
+    addonPurchases    AddonPurchase[]
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
-    @@unique([email])
+    @@unique([email, phone])
     @@map("user")
 }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Lock, ShieldAlert } from "lucide-react";
-import { getRemainingSeconds } from "#/lib/date";
+import { getRemainingSeconds } from "@lokale/lib/date";
 import { FlipClock } from "../ui/flip-clock";
 
 interface BanDurationProps {

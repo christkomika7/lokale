@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { ShieldAlert, X } from "lucide-react";
 import { useBanStore } from "#/store/ban.store";
-import { formatRemaining } from "#/lib/date";
+import { formatRemaining } from "@lokale/lib/date";
 
 export function BanBanner() {
   const banInfo = useBanStore((s) => s.banInfo);

@@ -3,6 +3,7 @@ import { z } from "zod";
 export const signInSchema = z.object({
   email: z
     .email({ error: "Adresse email invalide." })
+    .trim()
     .min(1, { error: "L'email est requis." }),
   password: z
     .string({ error: "Le mot de passe est invalide." })
@@ -20,6 +21,7 @@ export const signUpSchema = z.object({
     .min(2, { error: "Le prénom doit contenir au moins 2 caractères." }),
   email: z
     .email({ error: "Adresse email invalide." })
+    .trim()
     .min(1, { error: "L'email est requis." }),
   password: z
     .string({ error: "Le mot de passe est invalide." })

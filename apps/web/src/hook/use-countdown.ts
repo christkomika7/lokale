@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useCountdownStore } from "#/store/countdown.store";
-import { formatTime } from "#/lib/date";
+import { formatTime } from "@lokale/lib/date";
 
 interface UseCountdownOptions {
   key: string;

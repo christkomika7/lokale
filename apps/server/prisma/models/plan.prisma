@@ -1,0 +1,25 @@
+model Plan {
+    id            String        @id @default(cuid())
+    code          PlanCode      @unique
+    name          String
+    priceFcfa     Int
+    billingPeriod BillingPeriod @default(MONTHLY)
+
+    storageLimitMb        Int
+    maxPublications       Int
+    maxSondages           Int
+    maxAnnonces           Int
+    maxActions            Int
+    canCreateActions      Boolean @default(false)
+    includesCertification Boolean @default(false)
+
+    features Json?
+    isActive Boolean @default(true)
+
+    subscriptions Subscription[]
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@map("plan")
+}

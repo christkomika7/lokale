@@ -1,0 +1,37 @@
+model Action {
+    id   String     @id @default(cuid())
+    type ActionType
+
+    businessId String
+    business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+    title       String
+    description String?
+    fields      Json
+
+    status ActionStatus @default(OPEN)
+
+    submissions ActionSubmission[]
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@map("action")
+}
+
+model ActionSubmission {
+    id String @id @default(cuid())
+
+    actionId String
+    action   Action @relation(fields: [actionId], references: [id], onDelete: Cascade)
+
+    userId String
+    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    data   Json
+    status SubmissionStatus @default(PENDING)
+
+    createdAt DateTime @default(now())
+
+    @@map("action_submission")
+}

@@ -2,7 +2,6 @@ import {
   useMutation,
   useQueryClient,
   type UseMutationOptions,
-  type QueryKey,
 } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api, ApiError } from "#/lib/api-client";
@@ -14,7 +13,7 @@ interface UseApiMutationOptions<TResponse, TVariables> extends Omit<
   "mutationFn"
 > {
   method?: Method;
-  invalidate?: QueryKey[];
+  invalidate?: string[];
   successMessage?: string | ((data: TResponse) => string);
 }
 
@@ -28,6 +27,7 @@ export function useApiMutation<TResponse, TVariables = unknown>(
     invalidate,
     successMessage,
     onSuccess,
+    onError,
     ...rest
   } = options ?? {};
 
@@ -45,10 +45,11 @@ export function useApiMutation<TResponse, TVariables = unknown>(
             : successMessage,
         );
       }
-      invalidate?.forEach((key) =>
-        queryClient.invalidateQueries({ queryKey: key }),
-      );
-      onSuccess?.(data, variables, onMutateResult, context);
+      (queryClient.invalidateQueries({ queryKey: invalidate }),
+        onSuccess?.(data, variables, onMutateResult, context));
+    },
+    onError: (error, variables, onMutateResult, context) => {
+      onError?.(error, variables, onMutateResult, context);
     },
     ...rest,
   });
