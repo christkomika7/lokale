@@ -10,6 +10,8 @@ export const AUTH_ERROR_MESSAGES: Record<string, string> = {
   USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL:
     "Cette adresse email est deja utilisée.",
   PHONE_ALREADY_EXISTS: "Un compte existe déjà avec ce numéro de téléphone.",
+  YOU_ARE_NOT_ALLOWED_TO_CREATE_USERS:
+    "Vous n'êtes pas autorisé à créer des utilisateurs.",
 
   // ── Sign in ────────────────────────────────────────────────────────────────
   INVALID_EMAIL_OR_PASSWORD: "Email ou mot de passe incorrect.",

@@ -7,9 +7,9 @@ export const Route = createFileRoute("/(public)")({
 
 function RouteComponent() {
   return (
-    <>
+    <div>
       <Navbar />
       <Outlet />
-    </>
+    </div>
   );
 }

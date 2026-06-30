@@ -6,6 +6,7 @@ import { corsPlugin } from "../plugins/cors";
 import { rateLimiter } from "../middleware/rate-limiter";
 import { rateLimitStatus } from "../modules/security/rate-limite-status";
 import { adminRoute } from "../modules/admin";
+import { subscriptionRoute } from "../modules/subscription";
 
 const app = new Elysia()
   .get("/", () => "Hello World")
@@ -20,6 +21,7 @@ const app = new Elysia()
   // .use(route)
   // .use(loggerPlugin)
   .use(adminRoute)
+  .use(subscriptionRoute)
   .listen(env.decorator.env.PORT);
 
 console.log(

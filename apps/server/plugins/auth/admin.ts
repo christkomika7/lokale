@@ -5,6 +5,7 @@ import {
   userRole,
   workspaceRole,
 } from "@lokale/config/auth/permissions";
+import { Role } from "@lokale/types/user";
 
 export const adminPlugin = admin({
   ac,
@@ -13,8 +14,8 @@ export const adminPlugin = admin({
     WORKSPACE: workspaceRole,
     ADMIN: adminRole,
   },
-  defaultRole: "USER",
-  adminRoles: ["ADMIN"],
+  defaultRole: Role.USER,
+  adminRoles: [Role.ADMIN],
   bannedUserMessage:
     "Votre compte a été suspendu suite à des activités suspectes. Contactez le support.",
   defaultBanExpiresIn: 60 * 60 * 24,

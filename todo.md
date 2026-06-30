@@ -20,3 +20,5 @@ faire des recherches sur customSyntheticUser
 - lors de la creation du compte dans le mail otp y a pas le nom du user (inconnu)
 - Quand je cree un compte il est fait avec le role workspace au lieu de user
 - Quand je cree un user avec le role workspace il a le forfait pro pendant un mois gratuitement
+- revoir les messages du au status code au niveau du rate de auth-error.ts
+- revoir la deconnexion des fois une fois deconnecter le btn connexion ne me renvoi pas vers signin

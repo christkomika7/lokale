@@ -22,5 +22,12 @@ export const userSchema = z.object({
   role: z.enum(["ADMIN", "USER", "WORKSPACE"], {
     error: "Le role de l'utilisateur est obligatoire.",
   }),
+  plan: z.enum(["FREE", "PRO", "BUSINESS"], {
+    error: "Le plan de l'utilisateur est obligatoire.",
+  }),
+  password: z
+    .string()
+    .min(1, { error: "Le mot de passe est requis." })
+    .min(8, { error: "Le mot de passe doit contenir au moins 8 caractères." }),
   emailVerified: z.boolean(),
 });

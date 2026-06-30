@@ -1,8 +1,8 @@
 import { Avatar, AvatarFallback, AvatarImage } from "#/components/ui/avatar";
 import { Badge } from "#/components/ui/badge";
 import type { ColumnDef } from "#/components/ui/data-table";
-import EmptyData from "#/components/ui/empty-data";
 import { planCfg, roleCfg, statusCfg } from "#/config/admin/user";
+import { getCity } from "#/data/city";
 import { initials } from "#/lib/utils";
 import { formatDate } from "@lokale/lib/date";
 import type { User } from "@lokale/types/user";
@@ -43,9 +43,8 @@ export const columns: ColumnDef<User>[] = [
               )}
             </div>
             <p className="text-[11px] text-neutral-400 dark:text-neutral-500 flex">
-              {user.city || <EmptyData length={6} />}
-              {user.city && user.country && ", "}
-              {user.country || <EmptyData length={6} />}
+              {"République du Congo"}
+              {user.city ? ", " + getCity(user.city)?.label : ""}
             </p>
           </div>
         </div>
@@ -110,11 +109,8 @@ export const columns: ColumnDef<User>[] = [
     key: "actions",
     label: "Actions",
     size: "80px",
-    render: (user) => (
+    render: () => (
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[12px] font-medium text-neutral-500 dark:text-neutral-400">
-          {user.actions.toLocaleString("fr-FR")}
-        </span>
         <ChevronRight className="size-4 text-neutral-300 dark:text-neutral-600" />
       </div>
     ),

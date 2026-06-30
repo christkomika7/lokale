@@ -1,0 +1,107 @@
+model ActivityLog {
+    id String @id @default(cuid())
+
+    userId String?
+    user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+    userRole Role?
+
+    userName  String?
+    userEmail String?
+
+    action String
+
+    status LogStatus
+    level  LogLevel  @default(INFO)
+
+    message String
+
+    errorRaw Json?
+
+    targetType String?
+    targetId   String?
+
+    metadata Json?
+
+    ipAddress String?
+    userAgent String?
+
+    durationMs Int?
+
+    createdAt DateTime @default(now())
+
+    @@index([userId])
+    @@index([status])
+    @@index([level])
+    @@index([action])
+    @@index([targetType, targetId])
+    @@index([createdAt])
+    @@map("activity_log")
+}
+
+// ---------------------------------------------------------------------
+// NOTIFICATIONS
+// ---------------------------------------------------------------------
+
+model Notification {
+    id String @id @default(cuid())
+
+    userId String
+    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    type     NotificationType
+    category String? // regroupement libre, ex: "billing", "security", "social"
+
+    title   String
+    message String
+    data    Json? // contexte structuré, ex: { "paymentId": "...", "amount": 100 }
+
+    channel  NotificationChannel  @default(IN_APP)
+    priority NotificationPriority @default(NORMAL)
+    status   NotificationStatus   @default(PENDING)
+
+    isRead Boolean   @default(false)
+    readAt DateTime?
+
+    actionUrl String? // lien vers lequel rediriger au clic
+    icon      String?
+
+    sentAt      DateTime?
+    deliveredAt DateTime?
+    failedAt    DateTime?
+    failReason  String?
+
+    expiresAt DateTime? // pour les notifs temporaires (promos, etc.)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@index([userId])
+    @@index([userId, isRead])
+    @@index([type])
+    @@index([status])
+    @@index([createdAt])
+    @@map("notification")
+}
+
+model NotificationPreference {
+    id String @id @default(cuid())
+
+    userId String @unique
+    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    emailEnabled Boolean @default(true)
+    smsEnabled   Boolean @default(false)
+    pushEnabled  Boolean @default(true)
+    inAppEnabled Boolean @default(true)
+
+    mutedTypes      NotificationType[] // types de notifs désactivés par l'user
+    mutedCategories String[] // catégories désactivées
+    // ⚠️ Ces deux champs (listes scalaires) nécessitent PostgreSQL ou CockroachDB.
+    // Si tu es en MySQL/SQLite, remplace-les par un champ unique `Json?` (ex: mutedTypes Json?)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@map("notification_preference")
+}

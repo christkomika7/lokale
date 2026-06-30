@@ -1,10 +1,12 @@
 import Heading from "#/components/typography/heading";
 import { Separator } from "#/components/ui/separator";
-import { Role, type User, type UserSchemaType } from "@lokale/types/user";
+import { Plan, Role, type User, type UserSchemaType } from "@lokale/types/user";
 import { useForm } from "@tanstack/react-form";
 import {
+  BadgeDollarSign,
   Globe2,
   Loader2,
+  Lock,
   Mail,
   Phone,
   Save,
@@ -44,6 +46,8 @@ export const DEFAULT_FORM: UserSchemaType = {
   email: "",
   phone: "",
   role: Role.USER,
+  plan: Plan.FREE,
+  password: "",
   city: "",
   emailVerified: false,
 };
@@ -73,6 +77,8 @@ export default function UserForm({ mode, user, onClose }: UserFormProps) {
             email: user.email,
             phone: user.phone ?? "",
             role: user.role,
+            plan: user.plan,
+            password: "",
             city: user.city ?? "",
             emailVerified: user.emailVerified,
           }
@@ -83,6 +89,7 @@ export default function UserForm({ mode, user, onClose }: UserFormProps) {
       if (mode === "create") {
         createUser.mutate(value as UserSchemaType, {
           onError: (err) => {
+            console.log(err);
             setGlobalError(getAuthErrorMessage(err));
           },
           onSuccess: () => {
@@ -319,7 +326,7 @@ export default function UserForm({ mode, user, onClose }: UserFormProps) {
 
         {/* Rôle */}
         <div>
-          <Heading>Statut</Heading>
+          <Heading>Permissions & Sécurité</Heading>
           <form.Field name="role">
             {(field) => (
               <div className="space-y-1.5">
@@ -336,6 +343,94 @@ export default function UserForm({ mode, user, onClose }: UserFormProps) {
                   icon={ShieldCog}
                   placeholder="Sélectionner un rôle"
                   emptyLabel="Aucun rôle trouvé."
+                />
+                <InputErrorContainer>
+                  {field.state.meta.isTouched &&
+                    field.state.meta.errors.map((error) => (
+                      <InputErrorMessage
+                        key={error?.message}
+                        message={error?.message}
+                      />
+                    ))}
+                </InputErrorContainer>
+              </div>
+            )}
+          </form.Field>
+          <form.Subscribe selector={(state) => state.values.role}>
+            {(role) => {
+              switch (role) {
+                case "WORKSPACE":
+                  form.setFieldValue("plan", Plan.STARTER);
+                  break;
+                default:
+                  form.setFieldValue("plan", Plan.FREE);
+                  break;
+              }
+              return (
+                <form.Field name="plan">
+                  {(field) => (
+                    <div className="space-y-1.5">
+                      <Label htmlFor={field.name}>Plan</Label>
+                      <Combobox
+                        items={
+                          role === Role.USER || role === Role.ADMIN
+                            ? [{ id: 1, value: Plan.FREE, label: "Gratuit" }]
+                            : [
+                                {
+                                  id: 2,
+                                  value: Plan.STARTER,
+                                  label: "Starter",
+                                },
+                                { id: 3, value: Plan.PRO, label: "Pro" },
+                                {
+                                  id: 4,
+                                  value: Plan.BUSINESS,
+                                  label: "Business",
+                                },
+                              ]
+                        }
+                        value={field.state.value}
+                        onChange={(value) => field.handleChange(value as Plan)}
+                        onBlur={field.handleBlur}
+                        icon={BadgeDollarSign}
+                        placeholder="Sélectionner un plan"
+                        emptyLabel="Aucun plan trouvé."
+                      />
+                      <InputErrorContainer>
+                        {field.state.meta.isTouched &&
+                          field.state.meta.errors.map((error) => (
+                            <InputErrorMessage
+                              key={error?.message}
+                              message={error?.message}
+                            />
+                          ))}
+                      </InputErrorContainer>
+                    </div>
+                  )}
+                </form.Field>
+              );
+            }}
+          </form.Subscribe>
+
+          <form.Field name="password">
+            {(field) => (
+              <div className="space-y-2">
+                <Label htmlFor={field.name}>Mot de passe</Label>
+                <Input
+                  id={field.name}
+                  name={field.name}
+                  type="password"
+                  placeholder="••••••••"
+                  icon={Lock}
+                  value={field.state.value}
+                  hasError={
+                    field.state.meta.isTouched && !field.state.meta.isValid
+                  }
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  onBlur={field.handleBlur}
+                  position="left"
+                  autoComplete="new-password"
+                  className="min-w-auto w-full rounded-lg"
                 />
                 <InputErrorContainer>
                   {field.state.meta.isTouched &&

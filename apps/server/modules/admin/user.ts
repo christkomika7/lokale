@@ -6,6 +6,8 @@ import { prisma } from "../../lib/prisma";
 import { computeUserStatus, buildStatusWhere } from "../../lib/user-status";
 import { auth } from "../../lib/auth";
 import { sendOtpEmail, sendWelcomeEmail } from "../../lib/mailer";
+import { userSchema } from "@lokale/lib/validator/user";
+import { addMonths } from "@lokale/lib/date";
 
 const SORTABLE_FIELDS = {
   name: "name",
@@ -184,52 +186,93 @@ export const userRoute = new Elysia({ prefix: "/users" })
   .post(
     "/",
     async ({ body, status, request }) => {
-      const { lastname, firstname, email, phone, city, role, emailVerified } =
-        body;
+      const {
+        lastname,
+        firstname,
+        email,
+        phone,
+        city,
+        role,
+        plan,
+        password,
+        emailVerified,
+      } = body;
       const name = `${firstname} ${lastname}`.trim();
-      const tempPassword = crypto.randomUUID();
 
-      let created;
+      let userId: string;
       try {
-        created = await auth.api.createUser({
-          body: {
-            name,
-            email,
-            password: tempPassword,
-            data: { firstname, lastname, phone, city, emailVerified },
-          },
-          headers: request.headers,
+        const ctx = await auth.$context;
+        const hashed = await ctx.password.hash(password);
+
+        const existing = await prisma.user.findFirst({
+          where: { OR: [{ email }, ...(phone ? [{ phone }] : [])] },
         });
-      } catch (err: any) {
-        console.log(JSON.stringify(err, null, 2));
-        if (err.body?.code === "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL") {
-          return status(400, err?.body);
-        }
-        if (err.code === "P2002") {
-          console.log("HELLO");
+        if (existing) {
+          if (existing.email === email) {
+            return status(400, {
+              code: "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL",
+              message: "Email already exists",
+            });
+          }
           return status(400, {
             code: "PHONE_ALREADY_EXISTS",
             message: "Phone already exists",
           });
         }
+
+        const newUser = await prisma.user.create({
+          data: {
+            id: crypto.randomUUID(),
+            name,
+            email,
+            firstname,
+            lastname,
+            phone: phone || null,
+            city: city || null,
+            emailVerified: emailVerified ?? false,
+            role:
+              role === "ADMIN"
+                ? $Enums.Role.ADMIN
+                : role === "WORKSPACE"
+                  ? $Enums.Role.WORKSPACE
+                  : $Enums.Role.USER,
+            accounts: {
+              create: {
+                id: crypto.randomUUID(),
+                accountId: crypto.randomUUID(),
+                providerId: "credential",
+                password: hashed,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              },
+            },
+          },
+        });
+
+        userId = newUser.id;
+      } catch (err: any) {
+        if (err.code === "P2002") {
+          const field = err.meta?.target?.[0];
+          return status(400, {
+            code:
+              field === "phone"
+                ? "PHONE_ALREADY_EXISTS"
+                : "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL",
+            message:
+              field === "phone"
+                ? "Phone already exists"
+                : "Email already exists",
+          });
+        }
+        console.error(err);
         return status(500, {
           message: "Une erreur est survenue",
           code: "INTERNAL_SERVER_ERROR",
         });
       }
 
-      const prismaRole =
-        role === "ADMIN"
-          ? $Enums.Role.ADMIN
-          : role === "WORKSPACE"
-            ? $Enums.Role.WORKSPACE
-            : $Enums.Role.USER;
-
-      const updated = await prisma.user.update({
-        where: { id: created.user.id },
-        data: {
-          role: prismaRole,
-        },
+      const updated = await prisma.user.findUniqueOrThrow({
+        where: { id: userId },
         include: {
           subscriptions: {
             where: { status: "ACTIVE" },
@@ -241,21 +284,76 @@ export const userRoute = new Elysia({ prefix: "/users" })
         },
       });
 
-      // ── 3. Email ───────────────────────────────────────────────────────────
+      if (plan && plan !== "FREE") {
+        const planRecord = await prisma.plan.findUnique({
+          where: { code: plan as $Enums.PlanCode },
+        });
+
+        if (planRecord) {
+          const startDate = new Date();
+          const endDate = addMonths(startDate, 1);
+
+          await prisma.$transaction(async (tx) => {
+            await tx.subscription.updateMany({
+              where: {
+                userId,
+                status: { in: ["ACTIVE", "PENDING_PAYMENT"] },
+              },
+              data: { status: "CANCELLED" },
+            });
+
+            const subscription = await tx.subscription.create({
+              data: {
+                userId,
+                planId: planRecord.id,
+                status: "ACTIVE",
+                startDate,
+                endDate,
+                autoRenew: false,
+              },
+            });
+
+            await tx.usageQuota.create({
+              data: {
+                subscriptionId: subscription.id,
+                periodStart: startDate,
+                periodEnd: endDate,
+              },
+            });
+
+            await tx.user.update({
+              where: { id: userId },
+              data: { role: $Enums.Role.WORKSPACE },
+            });
+          });
+
+          const withSub = await prisma.user.findUnique({
+            where: { id: userId },
+            include: {
+              subscriptions: {
+                where: { status: "ACTIVE" },
+                orderBy: { createdAt: "desc" },
+                take: 1,
+                include: { plan: true },
+              },
+            },
+          });
+          if (withSub) Object.assign(updated, withSub);
+        }
+      }
+
       if (emailVerified) {
         await sendWelcomeEmail({ address: email, name }, name);
       } else {
         await auth.api
-          .sendVerificationOTP({
-            body: { email, type: "email-verification" },
+          .sendVerificationEmail({
+            body: { email },
             headers: request.headers,
           })
           .catch(console.error);
       }
 
-      // ── 4. Réponse ─────────────────────────────────────────────────────────
       const activePlan = updated.subscriptions[0]?.plan.code ?? "FREE";
-
       const mappedRole =
         updated.role === $Enums.Role.ADMIN
           ? Role.ADMIN
@@ -294,19 +392,5 @@ export const userRoute = new Elysia({ prefix: "/users" })
         headers: { "Content-Type": "application/json" },
       });
     },
-    {
-      body: t.Object({
-        lastname: t.String({ minLength: 2 }),
-        firstname: t.String({ minLength: 2 }),
-        email: t.String({ format: "email" }),
-        phone: t.Optional(t.String({ minLength: 9, maxLength: 9 })),
-        city: t.Optional(t.String()),
-        role: t.Union([
-          t.Literal("ADMIN"),
-          t.Literal("USER"),
-          t.Literal("WORKSPACE"),
-        ]),
-        emailVerified: t.Boolean(),
-      }),
-    },
+    { body: userSchema },
   );

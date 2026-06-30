@@ -9,7 +9,8 @@
     "db:generate": "bunx --bun prisma generate",
     "db:update": "bunx --bun prisma migrate dev --name update && bunx --bun prisma generate",
     "db:reset": "bunx --bun prisma migrate reset",
-    "db:push": "bunx --bun prisma db push && bunx --bun prisma generate"
+    "db:push": "bunx --bun prisma db push && bunx --bun prisma generate",
+    "db:seed": "bunx --bun prisma db seed"
   },
   "dependencies": {
     "@elysiajs/cors": "^1.4.2",

@@ -1,3 +1,4 @@
+import { Prisma } from "../generated/prisma/client";
 import { EmailAddress } from "../type/mailer";
 
 export function formatAddress(
@@ -13,4 +14,29 @@ export function formatAddresses(
   if (!addr) return undefined;
   const arr = Array.isArray(addr) ? addr : [addr];
   return arr.map(formatAddress);
+}
+
+export function serializeError(
+  error: unknown,
+): Prisma.InputJsonValue | undefined {
+  if (error === undefined || error === null) return undefined;
+
+  if (error instanceof Error) {
+    return {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+      cause: error.cause !== undefined ? String(error.cause) : undefined,
+    };
+  }
+
+  if (typeof error === "object") {
+    try {
+      return JSON.parse(JSON.stringify(error));
+    } catch {
+      return { raw: String(error) };
+    }
+  }
+
+  return { raw: String(error) };
 }

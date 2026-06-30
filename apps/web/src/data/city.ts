@@ -40,3 +40,7 @@ export const congoCities = [
   { id: 39, value: "ngabe", label: "Ngabé" },
   { id: 40, value: "ngo", label: "Ngo" },
 ];
+
+export function getCity(value: string) {
+  return congoCities.find((city) => city.value === value);
+}

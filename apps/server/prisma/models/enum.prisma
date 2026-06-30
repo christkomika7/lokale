@@ -6,6 +6,7 @@ enum Role {
 
 enum PlanCode {
     FREE
+    STARTER
     PRO
     BUSINESS
 }
@@ -68,4 +69,62 @@ enum AddonKind {
     PUBLICATION
     SONDAGE
     ANNONCE
+}
+
+enum UserCreationSource {
+    SELF_REGISTRATION
+    ADMIN
+    SYSTEM
+    IMPORT
+    OAUTH
+    API
+}
+
+enum LogStatus {
+    SUCCESS
+    ERROR
+    WARNING
+    PENDING
+}
+
+enum LogLevel {
+    DEBUG
+    INFO
+    WARNING
+    ERROR
+    CRITICAL
+}
+
+enum NotificationType {
+    INFO
+    SUCCESS
+    WARNING
+    ERROR
+    SECURITY
+    PAYMENT
+    SUBSCRIPTION
+    PROMOTION
+    SYSTEM
+}
+
+enum NotificationChannel {
+    IN_APP
+    EMAIL
+    SMS
+    PUSH
+}
+
+enum NotificationPriority {
+    LOW
+    NORMAL
+    HIGH
+    URGENT
+}
+
+enum NotificationStatus {
+    PENDING
+    SENT
+    DELIVERED
+    FAILED
+    READ
 }

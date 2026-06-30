@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as publicRouteRouteImport } from './routes/(public)/route'
 import { Route as privateRouteRouteImport } from './routes/(private)/route'
 import { Route as publicIndexRouteImport } from './routes/(public)/index'
+import { Route as publicSubscriptionRouteImport } from './routes/(public)/subscription'
 import { Route as authVerifyOtpRouteImport } from './routes/(auth)/verify-otp'
 import { Route as authSignUpRouteImport } from './routes/(auth)/sign-up'
 import { Route as authSignInRouteImport } from './routes/(auth)/sign-in'
@@ -34,6 +35,11 @@ const privateRouteRoute = privateRouteRouteImport.update({
 const publicIndexRoute = publicIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => publicRouteRoute,
+} as any)
+const publicSubscriptionRoute = publicSubscriptionRouteImport.update({
+  id: '/subscription',
+  path: '/subscription',
   getParentRoute: () => publicRouteRoute,
 } as any)
 const authVerifyOtpRoute = authVerifyOtpRouteImport.update({
@@ -94,6 +100,7 @@ export interface FileRoutesByFullPath {
   '/sign-in': typeof authSignInRoute
   '/sign-up': typeof authSignUpRoute
   '/verify-otp': typeof authVerifyOtpRoute
+  '/subscription': typeof publicSubscriptionRoute
   '/': typeof publicIndexRoute
   '/admin/users': typeof privateAdminUsersRoute
   '/admin/': typeof privateAdminIndexRoute
@@ -106,6 +113,7 @@ export interface FileRoutesByTo {
   '/sign-in': typeof authSignInRoute
   '/sign-up': typeof authSignUpRoute
   '/verify-otp': typeof authVerifyOtpRoute
+  '/subscription': typeof publicSubscriptionRoute
   '/': typeof publicIndexRoute
   '/admin/users': typeof privateAdminUsersRoute
   '/admin': typeof privateAdminIndexRoute
@@ -122,6 +130,7 @@ export interface FileRoutesById {
   '/(auth)/sign-in': typeof authSignInRoute
   '/(auth)/sign-up': typeof authSignUpRoute
   '/(auth)/verify-otp': typeof authVerifyOtpRoute
+  '/(public)/subscription': typeof publicSubscriptionRoute
   '/(public)/': typeof publicIndexRoute
   '/(private)/admin/users': typeof privateAdminUsersRoute
   '/(private)/admin/': typeof privateAdminIndexRoute
@@ -137,6 +146,7 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/sign-up'
     | '/verify-otp'
+    | '/subscription'
     | '/'
     | '/admin/users'
     | '/admin/'
@@ -149,6 +159,7 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/sign-up'
     | '/verify-otp'
+    | '/subscription'
     | '/'
     | '/admin/users'
     | '/admin'
@@ -164,6 +175,7 @@ export interface FileRouteTypes {
     | '/(auth)/sign-in'
     | '/(auth)/sign-up'
     | '/(auth)/verify-otp'
+    | '/(public)/subscription'
     | '/(public)/'
     | '/(private)/admin/users'
     | '/(private)/admin/'
@@ -202,6 +214,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof publicIndexRouteImport
+      parentRoute: typeof publicRouteRoute
+    }
+    '/(public)/subscription': {
+      id: '/(public)/subscription'
+      path: '/subscription'
+      fullPath: '/subscription'
+      preLoaderRoute: typeof publicSubscriptionRouteImport
       parentRoute: typeof publicRouteRoute
     }
     '/(auth)/verify-otp': {
@@ -307,10 +326,12 @@ const privateRouteRouteWithChildren = privateRouteRoute._addFileChildren(
 )
 
 interface publicRouteRouteChildren {
+  publicSubscriptionRoute: typeof publicSubscriptionRoute
   publicIndexRoute: typeof publicIndexRoute
 }
 
 const publicRouteRouteChildren: publicRouteRouteChildren = {
+  publicSubscriptionRoute: publicSubscriptionRoute,
   publicIndexRoute: publicIndexRoute,
 }
 

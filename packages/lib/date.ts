@@ -66,3 +66,9 @@ export function formatRelativeDate(value: string) {
   const diffJ = Math.floor(diffH / 24);
   return `Il y a ${diffJ}j`;
 }
+
+export function addMonths(date: Date, months: number): Date {
+  const d = new Date(date);
+  d.setMonth(d.getMonth() + months);
+  return d;
+}

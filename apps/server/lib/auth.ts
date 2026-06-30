@@ -7,6 +7,7 @@ import { APIError, createAuthMiddleware } from "better-auth/api";
 import { $Enums } from "../generated/prisma/browser";
 import { signUpSchema } from "@lokale/lib/validator/auth";
 import { MAX_REQUESTS, WINDOW_MS } from "@lokale/config/auth/rate-limiter";
+import { sendEmail } from "./mailer";
 
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
@@ -45,7 +46,13 @@ export const auth = betterAuth({
     enabled: true,
     autoSignIn: false,
     requireEmailVerification: true,
-    revokeSessionsOnPasswordReset: true,
+    emailVerificationCallbackURL: "http://localhost:3000/auth/verify-email",
+    // sendVerificationEmail: async ({ user, url, token }) => {
+    // await sendEmail(
+    //   { address: user.email, name: user.name },
+    //   { url, userName: user.firstname ?? user.name },
+    // );
+    // },
   },
   advanced: {
     cookiePrefix: "lokale",
@@ -74,13 +81,13 @@ export const auth = betterAuth({
     expiresIn: 60 * 60 * 24 * 30, // 30 jours
     updateAge: 60 * 60 * 24, // rafraîchit l'expiration si activité dans les dernières 24h
   },
-  rateLimit: {
-    enabled: true,
-    window: WINDOW_MS,
-    max: MAX_REQUESTS,
-    storage: "database",
-    modelName: "rateLimit",
-  },
+  // rateLimit: {
+  //   enabled: false,
+  //   window: WINDOW_MS,
+  //   max: MAX_REQUESTS,
+  //   storage: "database",
+  //   modelName: "rateLimit",
+  // },
 
   hooks: {
     before: createAuthMiddleware(async (ctx) => {
