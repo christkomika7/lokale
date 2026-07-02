@@ -31,3 +31,10 @@ export const userSchema = z.object({
     .min(8, { error: "Le mot de passe doit contenir au moins 8 caractères." }),
   emailVerified: z.boolean(),
 });
+
+export const emailSchema = z.object({
+  email: z
+    .email({ error: "Adresse email invalide." })
+    .trim()
+    .min(1, { error: "L'email est requis." }),
+});

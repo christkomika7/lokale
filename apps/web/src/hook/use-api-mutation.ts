@@ -6,7 +6,7 @@ import {
 import { toast } from "sonner";
 import { api, ApiError } from "#/lib/api-client";
 
-type Method = "post" | "put" | "patch" | "delete";
+type Method = "get" | "post" | "put" | "patch" | "delete";
 
 interface UseApiMutationOptions<TResponse, TVariables> extends Omit<
   UseMutationOptions<TResponse, ApiError, TVariables>,
@@ -34,7 +34,11 @@ export function useApiMutation<TResponse, TVariables = unknown>(
   return useMutation<TResponse, ApiError, TVariables>({
     mutationFn: (variables) => {
       const url = typeof path === "function" ? path(variables) : path;
+
       if (method === "delete") return api.delete<TResponse>(url);
+
+      if (method === "get") return api.get<TResponse>(url);
+
       return api[method]<TResponse, TVariables>(url, variables);
     },
     onSuccess: (data, variables, onMutateResult, context) => {
@@ -45,8 +49,10 @@ export function useApiMutation<TResponse, TVariables = unknown>(
             : successMessage,
         );
       }
-      (queryClient.invalidateQueries({ queryKey: invalidate }),
-        onSuccess?.(data, variables, onMutateResult, context));
+      if (invalidate) {
+        queryClient.invalidateQueries({ queryKey: invalidate });
+      }
+      onSuccess?.(data, variables, onMutateResult, context);
     },
     onError: (error, variables, onMutateResult, context) => {
       onError?.(error, variables, onMutateResult, context);

@@ -6,6 +6,9 @@ export const envPlugin = env({
   APP_ENV: t.String({
     error: envError.appEnv,
   }),
+  CLIENT_URL: t.String({
+    error: envError.clientUrl,
+  }),
   BETTER_AUTH_SECRET: t.String({
     error: envError.betterAuthSecret,
   }),

@@ -1,4 +1,4 @@
-import { betterAuth } from "better-auth";
+import { betterAuth, type User } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "./prisma";
 import { emailOtpPlugin } from "../plugins/auth/email-otp";
@@ -7,7 +7,11 @@ import { APIError, createAuthMiddleware } from "better-auth/api";
 import { $Enums } from "../generated/prisma/browser";
 import { signUpSchema } from "@lokale/lib/validator/auth";
 import { MAX_REQUESTS, WINDOW_MS } from "@lokale/config/auth/rate-limiter";
-import { sendEmail } from "./mailer";
+import { sendEmail, sendVerifyEmail } from "./mailer";
+import { envPlugin as env } from "../plugins/env";
+import { hashToken } from "@lokale/lib/token";
+import { TOKEN_EXPIRES_IN } from "@lokale/config/auth/email";
+import { addMinutes, minutesToSeconds } from "date-fns";
 
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
@@ -42,51 +46,35 @@ export const auth = betterAuth({
       },
     },
   },
+  emailVerification: {
+    sendVerificationEmail: async ({ user, token }) => {
+      const url = `${env.decorator.env.CLIENT_URL}/verify-email?token=${token}`;
+      console.log({ user, token });
+      await sendVerifyEmail(user.email, url, {
+        userName: user.name,
+        expiresInMinutes: TOKEN_EXPIRES_IN,
+      });
+    },
+    sendOnSignUp: false,
+    autoSignInAfterVerification: false,
+    expiresIn: minutesToSeconds(TOKEN_EXPIRES_IN),
+  },
   emailAndPassword: {
     enabled: true,
     autoSignIn: false,
     requireEmailVerification: true,
-    emailVerificationCallbackURL: "http://localhost:3000/auth/verify-email",
-    // sendVerificationEmail: async ({ user, url, token }) => {
-    // await sendEmail(
-    //   { address: user.email, name: user.name },
-    //   { url, userName: user.firstname ?? user.name },
-    // );
-    // },
   },
-  advanced: {
-    cookiePrefix: "lokale",
-    useSecureCookies: false, // true en production
-    // domain: "localhost",
-    // crossSubDomainCookies: {
-    //   enabled: true,
-    //   domain: "localhost",
-    // },
-    ipAddress: {
-      ipAddressHeaders: ["x-forwarded-for", "x-real-ip"],
-    },
-  },
-  trustedOrigins: ["http://localhost:3000"],
-  // socialProviders: {
-  //   facebook: {
-  //     clientId: "",
-  //     clientSecret: "",
-  //   },
-  //   google: {
-  //     clientId: "",
-  //     clientSecret: "",
+  // advanced: {
+  //   cookiePrefix: "lokale",
+  //   useSecureCookies: false, // true en production
+  //   ipAddress: {
+  //     ipAddressHeaders: ["x-forwarded-for", "x-real-ip"],
   //   },
   // },
-  session: {
-    expiresIn: 60 * 60 * 24 * 30, // 30 jours
-    updateAge: 60 * 60 * 24, // rafraîchit l'expiration si activité dans les dernières 24h
-  },
-  // rateLimit: {
-  //   enabled: false,
-  //   window: WINDOW_MS,
-  //   max: MAX_REQUESTS,
-  //   storage: "database",
-  //   modelName: "rateLimit",
+  trustedOrigins: ["http://localhost:3000"],
+  // session: {
+  //   expiresIn: 60 * 60 * 24 * 30, // 30 jours
+  //   updateAge: 60 * 60 * 24,
   // },
 
   hooks: {
@@ -96,6 +84,20 @@ export const auth = betterAuth({
 
         if (!data.success) {
           throw new APIError("BAD_REQUEST", { message: "Email non autorisé" });
+        }
+      }
+
+      if (ctx.path === "/verify-email") {
+        const token = ctx.query?.token;
+        if (typeof token === "string" && token.length > 0) {
+          const tokenHash = hashToken(token);
+          await prisma.verificationTokenLog
+            .upsert({
+              where: { tokenHash },
+              create: { tokenHash },
+              update: {},
+            })
+            .catch(() => {});
         }
       }
     }),

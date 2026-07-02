@@ -22,3 +22,4 @@ faire des recherches sur customSyntheticUser
 - Quand je cree un user avec le role workspace il a le forfait pro pendant un mois gratuitement
 - revoir les messages du au status code au niveau du rate de auth-error.ts
 - revoir la deconnexion des fois une fois deconnecter le btn connexion ne me renvoi pas vers signin
+- Voir to les mailto present dans les liens de mon projet

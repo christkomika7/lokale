@@ -341,14 +341,15 @@ export const userRoute = new Elysia({ prefix: "/users" })
           if (withSub) Object.assign(updated, withSub);
         }
       }
-
+      console.log("Hello");
       if (emailVerified) {
         await sendWelcomeEmail({ address: email, name }, name);
       } else {
+        console.log(":: Sending verification email to:", email);
         await auth.api
           .sendVerificationEmail({
             body: { email },
-            headers: request.headers,
+            headers: new Headers({ "Content-Type": "application/json" }),
           })
           .catch(console.error);
       }

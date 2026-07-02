@@ -1,0 +1,8 @@
+model VerificationTokenLog {
+    id        String   @id @default(cuid())
+    tokenHash String   @unique
+    createdAt DateTime @default(now())
+
+    @@index([createdAt])
+    @@map("verification_token_log")
+}

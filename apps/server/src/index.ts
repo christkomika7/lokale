@@ -7,6 +7,7 @@ import { rateLimiter } from "../middleware/rate-limiter";
 import { rateLimitStatus } from "../modules/security/rate-limite-status";
 import { adminRoute } from "../modules/admin";
 import { subscriptionRoute } from "../modules/subscription";
+import { userAuthRoute } from "../modules/auth/user";
 
 const app = new Elysia()
   .get("/", () => "Hello World")
@@ -22,6 +23,7 @@ const app = new Elysia()
   // .use(loggerPlugin)
   .use(adminRoute)
   .use(subscriptionRoute)
+  .use(userAuthRoute)
   .listen(env.decorator.env.PORT);
 
 console.log(

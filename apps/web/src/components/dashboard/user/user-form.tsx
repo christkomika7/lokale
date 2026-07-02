@@ -94,7 +94,12 @@ export default function UserForm({ mode, user, onClose }: UserFormProps) {
           },
           onSuccess: () => {
             toast.success(
-              `L'utilisateur ${value.firstname} ${value.lastname} a été ajouté avec succès`,
+              `${value.firstname} ${value.lastname} a été ajouté avec succès`,
+              {
+                description:
+                  "Un lien de vérification a été envoyé à son adresse email. Le compte sera actif dès validation.",
+                duration: 5000,
+              },
             );
             form.reset();
             queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
