@@ -8,6 +8,7 @@ import { rateLimitStatus } from "../modules/security/rate-limite-status";
 import { adminRoute } from "../modules/admin";
 import { subscriptionRoute } from "../modules/subscription";
 import { userAuthRoute } from "../modules/auth/user";
+import { lastSeenPlugin } from "../middleware/last-seen";
 
 const app = new Elysia()
   .get("/", () => "Hello World")
@@ -17,6 +18,7 @@ const app = new Elysia()
   // .use(rateLimiter)
   // .use(rateLimitStatus)
   .use(betterAuthPlugin)
+  .use(lastSeenPlugin)
 
   // .use(wsPlugin)
   // .use(route)

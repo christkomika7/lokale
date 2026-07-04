@@ -41,17 +41,23 @@ export function formatRemaining(banExpires: string) {
 }
 
 export function formatDate(value: string, withTime = false) {
-  return new Date(value).toLocaleDateString("fr-FR", {
+  const date = new Date(value);
+
+  const datePart = date.toLocaleDateString("fr-FR", {
     day: "2-digit",
     month: "short",
     year: "numeric",
-    ...(withTime && {
-      hour: "2-digit",
-      minute: "2-digit",
-    }),
   });
-}
 
+  if (!withTime) return datePart;
+
+  const timePart = date.toLocaleTimeString("fr-FR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  return `${datePart} à ${timePart}`;
+}
 export function formatRelativeDate(value: string) {
   const date = new Date(value);
   const diffMs = Date.now() - date.getTime();

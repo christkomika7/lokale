@@ -1,1 +1,1 @@
-export const TOKEN_EXPIRES_IN = 1;
+export const TOKEN_EXPIRES_IN = 60;

@@ -1,5 +1,6 @@
 import { createAccessControl } from "better-auth/plugins/access";
 import { defaultStatements, adminAc } from "better-auth/plugins/admin/access";
+import { Plan, Role } from "../../types/user";
 
 export const statement = {
   ...defaultStatements,
@@ -40,3 +41,30 @@ export const adminRole = ac.newRole({
   storage: ["read", "delete"],
   billing: ["read", "refund"],
 });
+
+export const roles = [
+  { id: 1, value: Role.USER, label: "Utilisateur" },
+  { id: 2, value: Role.WORKSPACE, label: "Entreprise" },
+  { id: 3, value: Role.ADMIN, label: "Admin" },
+];
+
+export const plans = [
+  [
+    { id: 1, value: Plan.FREE, label: "Gratuit" },
+    {
+      id: 2,
+      value: Plan.STARTER,
+      label: "Starter",
+    },
+    { id: 3, value: Plan.PRO, label: "Pro" },
+    {
+      id: 4,
+      value: Plan.BUSINESS,
+      label: "Business",
+    },
+  ],
+];
+
+export function getPlans(options: Plan[]) {
+  return plans.flat().filter((plan) => options.includes(plan.value));
+}

@@ -5,7 +5,7 @@ import {
   OTP_RESEND_STRATEGY,
   OTP_TTL,
 } from "@lokale/config/auth/otp";
-import { sendOtpEmail } from "../../lib/mailer";
+import { sendOtpEmail, sendResetPasswordEmail } from "../../lib/mailer";
 import { secondsToMinutes } from "date-fns";
 import { prisma } from "../../lib/prisma";
 
@@ -22,6 +22,7 @@ export const emailOtpPlugin = emailOTP({
     });
 
     const userName = user?.name ?? "Inconnu";
+
     if (type === "sign-in") {
       await sendOtpEmail(email, otp, {
         userName,
@@ -30,6 +31,11 @@ export const emailOtpPlugin = emailOTP({
     } else if (type === "email-verification") {
       await sendOtpEmail(email, otp, {
         userName,
+        expiresInMinutes: secondsToMinutes(OTP_TTL),
+      });
+    } else if (type === "forget-password") {
+      await sendResetPasswordEmail(email, otp, {
+        userName: userName,
         expiresInMinutes: secondsToMinutes(OTP_TTL),
       });
     } else {

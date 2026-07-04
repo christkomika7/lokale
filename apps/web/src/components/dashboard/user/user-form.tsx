@@ -33,6 +33,7 @@ import { useApiMutation } from "#/hook/use-api-mutation";
 import { getAuthErrorMessage } from "@lokale/lib/auth-error";
 import { toast } from "sonner";
 import { queryClient } from "#/lib/query-client";
+import { getPlans, roles } from "@lokale/config/auth/permissions";
 
 interface UserFormProps {
   mode: "create" | "edit";
@@ -89,7 +90,6 @@ export default function UserForm({ mode, user, onClose }: UserFormProps) {
       if (mode === "create") {
         createUser.mutate(value as UserSchemaType, {
           onError: (err) => {
-            console.log(err);
             setGlobalError(getAuthErrorMessage(err));
           },
           onSuccess: () => {
@@ -337,11 +337,7 @@ export default function UserForm({ mode, user, onClose }: UserFormProps) {
               <div className="space-y-1.5">
                 <Label htmlFor={field.name}>Rôle</Label>
                 <Combobox
-                  items={[
-                    { id: 1, value: Role.USER, label: "Utilisateur" },
-                    { id: 2, value: Role.WORKSPACE, label: "Entreprise" },
-                    { id: 3, value: Role.ADMIN, label: "Admin" },
-                  ]}
+                  items={roles}
                   value={field.state.value}
                   onChange={(value) => field.handleChange(value as Role)}
                   onBlur={field.handleBlur}
@@ -378,21 +374,9 @@ export default function UserForm({ mode, user, onClose }: UserFormProps) {
                       <Label htmlFor={field.name}>Plan</Label>
                       <Combobox
                         items={
-                          role === Role.USER || role === Role.ADMIN
-                            ? [{ id: 1, value: Plan.FREE, label: "Gratuit" }]
-                            : [
-                                {
-                                  id: 2,
-                                  value: Plan.STARTER,
-                                  label: "Starter",
-                                },
-                                { id: 3, value: Plan.PRO, label: "Pro" },
-                                {
-                                  id: 4,
-                                  value: Plan.BUSINESS,
-                                  label: "Business",
-                                },
-                              ]
+                          role !== Role.WORKSPACE
+                            ? getPlans([Plan.FREE])
+                            : getPlans([Plan.STARTER, Plan.PRO, Plan.BUSINESS])
                         }
                         value={field.state.value}
                         onChange={(value) => field.handleChange(value as Plan)}

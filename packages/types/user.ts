@@ -38,6 +38,7 @@ export interface User {
   lastSeen: string;
   actions: number;
   emailVerified: boolean;
+  idVerified: boolean;
   ips: string[];
   devices: string[];
   suspiciousActivity: boolean;

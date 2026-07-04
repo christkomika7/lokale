@@ -341,11 +341,9 @@ export const userRoute = new Elysia({ prefix: "/users" })
           if (withSub) Object.assign(updated, withSub);
         }
       }
-      console.log("Hello");
       if (emailVerified) {
         await sendWelcomeEmail({ address: email, name }, name);
       } else {
-        console.log(":: Sending verification email to:", email);
         await auth.api
           .sendVerificationEmail({
             body: { email },
@@ -383,6 +381,7 @@ export const userRoute = new Elysia({ prefix: "/users" })
         lastSeen: (updated.lastSeenAt ?? updated.createdAt).toISOString(),
         actions: updated._count.actionSubmissions,
         emailVerified: updated.emailVerified,
+        idVerified: updated.idVerified,
         ips: [],
         devices: [],
         suspiciousActivity: updated.suspiciousActivity,

@@ -39,7 +39,7 @@ export default function Dropdown({
   const [loadingValue, setLoadingValue] = useState<string | null>(null);
 
   const handleSelect = async (item: SelectProps) => {
-    if (loadingValue) return; // évite les double-clics / clics concurrents
+    if (loadingValue) return;
 
     if (item.action) {
       setLoadingValue(item.value);

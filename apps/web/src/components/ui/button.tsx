@@ -23,10 +23,12 @@ const buttonVariants = cva(
           "bg-amber-400 hover:bg-amber-500 text-white! transition-colors dark:border-amber-500/15 dark:bg-amber-500/15 dark:text-amber-400 dark:backdrop-blur-lg",
         info: "text-orange-500! hover:text-orange-600! transition-colors h-fit!",
         error:
-          "bg-red-500 hover:bg-red-600 text-white! transition-colors dark:border-red-500/15 dark:bg-red-500/15 dark:text-red-400 dark:backdrop-blur-lg",
+          "bg-red-400 hover:bg-red-500/90 text-white! transition-colors dark:border-red-500/15 dark:bg-red-500/15 dark:text-red-400 dark:backdrop-blur-lg",
         success:
           "bg-emerald-500 hover:bg-emerald-600 text-white! transition-colors dark:border-emerald-500/15 dark:bg-emerald-500/15 dark:text-emerald-400 dark:backdrop-blur-lg",
         icon: "group border border-input  dark:border-transparent dark:bg-neutral-700/30 hover:text-amber-400 transition-colors  hover:border-amber-400",
+        active:
+          "bg-blue-500 hover:bg-blue-600 text-white! transition-colors dark:border-blue-500/15 dark:bg-blue-500/15 dark:text-blue-400 dark:backdrop-blur-lg",
       },
       size: {
         default:

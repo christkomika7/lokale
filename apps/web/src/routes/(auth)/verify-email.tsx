@@ -132,7 +132,6 @@ function RouteComponent() {
     e.preventDefault();
 
     const email = emailSchema.safeParse({ email: manualEmail });
-    console.log({ email, manualEmail });
     if (!email.success) {
       setEmailError("Adresse email invalide.");
       return;

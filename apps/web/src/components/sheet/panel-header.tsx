@@ -3,6 +3,7 @@ import type { User } from "@lokale/types/user";
 import { AlertTriangle, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Badge } from "../ui/badge";
+import { planCfg, roleCfg, statusCfg } from "#/config/admin/user";
 
 interface PanelHeaderProps {
   user: User;
@@ -16,6 +17,9 @@ export default function PanelHeader({
   closeAction,
 }: PanelHeaderProps) {
   const hasEdit = editAction !== undefined;
+  const s = statusCfg[user.status];
+  const r = roleCfg[user.role];
+  const p = planCfg[user.plan];
   return (
     <>
       <div className="px-5 pt-5 pb-4 flex items-start justify-between gap-3 shrink-0">
@@ -32,10 +36,10 @@ export default function PanelHeader({
             />
           </div>
           <div>
-            <p className="text-sm font-semibold text-neutral-800 dark:text-neutral-100">
+            <p className="text-sm font-semibold text-neutral-800 dark:text-neutral-200 truncate max-w-[150px]">
               {user.name}
             </p>
-            <p className="text-[11px] text-neutral-400 dark:text-neutral-500">
+            <p className="text-[11px] text-neutral-500 dark:text-neutral-100 truncate max-w-[150px]">
               {user.email}
             </p>
           </div>
@@ -44,28 +48,28 @@ export default function PanelHeader({
           {hasEdit && (
             <button
               onClick={editAction}
-              className="h-7 px-2.5 rounded-lg text-[11px] font-medium text-amber-500 bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20 transition-colors"
+              className="h-7 px-2.5 rounded-sm text-[11px] font-medium text-amber-500 bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20 transition-colors"
             >
               Modifier
             </button>
           )}
           <button
             onClick={closeAction}
-            className="size-7 rounded-lg flex items-center justify-center text-neutral-400 hover:bg-slate-100 dark:hover:bg-neutral-800 transition-colors"
+            className="size-7 rounded-sm flex items-center justify-center text-neutral-400 hover:bg-slate-100 dark:hover:bg-neutral-800 transition-colors"
           >
             <X className="size-4" />
           </button>
         </div>
       </div>
       <div className="px-5 pb-4 flex flex-wrap gap-1.5 shrink-0">
-        <Badge variant="success">
-          <span className={`size-1.5 rounded-full mr-1`} />
-          Entrepreneur
+        <Badge className={s.badge}>
+          <span className={`size-1.5 rounded-full mr-1 ${s?.dot}`} />
+          {s.label}
         </Badge>
-        <Badge variant="success">Pro</Badge>
-        <Badge variant="warning">Start</Badge>
+        <Badge className={r.badge}>{r.label}</Badge>
+        <Badge className={p.badge}>{p.label}</Badge>
         {user.suspiciousActivity && (
-          <Badge className="bg-red-50 text-red-500 dark:bg-red-500/10 dark:text-red-400">
+          <Badge variant="warning">
             <AlertTriangle className="size-2.5 mr-1" />
             Suspect
           </Badge>

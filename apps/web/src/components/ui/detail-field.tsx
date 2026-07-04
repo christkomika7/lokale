@@ -31,8 +31,8 @@ export default function DetailField({
 
       {isRow ? (
         <div className="flex w-full justify-between items-end">
-          <div className="min-w-0">
-            <p className="text-[11px] text-neutral-400 dark:text-neutral-200 mb-0.5">
+          <div className="min-w-0 -space-y-0.5">
+            <p className="text-[11px] text-neutral-400 dark:text-neutral-200">
               {label}
             </p>
             {value && (
