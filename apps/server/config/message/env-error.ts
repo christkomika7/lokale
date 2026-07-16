@@ -1,6 +1,7 @@
 export const envError = {
   appEnv: "Le type d'environnement est requis.",
   clientUrl: "L'url du client est requis.",
+  clientPort: "Le port du client est requis",
   betterAuthSecret: "Le secret de better auth est requis.",
   betterAuthUrl: "L'url du better auth est requis.",
   databaseUrl: "L'url de la base de données est requis.",

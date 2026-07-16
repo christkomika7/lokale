@@ -6,16 +6,31 @@ import {
   getVerificationTokenStatus,
 } from "../../plugins/auth/token";
 import { envPlugin as env } from "../../plugins/env";
+import { logSuccess, logRejected, logFailure } from "../../lib/logs";
 
 export const userAuthRoute = new Elysia({ prefix: "/user" })
   .get(
     "/verification-token-status",
     async ({ query }) => {
-      console.log("token", query.token);
-      console.log("TEST");
-      const status = await getVerificationTokenStatus(query.token ?? "");
-      console.log({ status });
-      return { status };
+      try {
+        const status = await getVerificationTokenStatus(query.token ?? "");
+
+        if (status === "invalid") {
+          await logRejected({
+            action: "auth.verification_token_check_rejected",
+            message: `Statut du token de vérification: ${status}`,
+          });
+        }
+
+        return { status };
+      } catch (err) {
+        await logFailure({
+          action: "auth.verification_token_check_failed",
+          message: "Échec technique lors de la vérification du statut du token",
+          error: err,
+        });
+        throw err;
+      }
     },
     {
       query: t.Object({
@@ -32,7 +47,22 @@ export const userAuthRoute = new Elysia({ prefix: "/user" })
           body: { email, callbackURL: "/verify-email" },
           headers: new Headers(),
         });
-      } catch {}
+
+        await logSuccess({
+          action: "auth.verification_email_resent",
+          message: `Email de vérification renvoyé à ${email}`,
+          userEmail: email,
+        });
+      } catch (err) {
+        // On n'expose jamais l'échec au client (énumération d'emails), mais
+        // on le log quand même pour le monitoring.
+        await logFailure({
+          action: "auth.verification_email_resend_failed",
+          message: `Échec du renvoi de l'email de vérification pour ${email}`,
+          userEmail: email,
+          error: err,
+        });
+      }
 
       return {
         message:
@@ -46,8 +76,25 @@ export const userAuthRoute = new Elysia({ prefix: "/user" })
   .get(
     "/reset-password-token-status",
     async ({ query }) => {
-      const status = await getResetPasswordTokenStatus(query.token ?? "");
-      return { status };
+      try {
+        const status = await getResetPasswordTokenStatus(query.token ?? "");
+
+        if (status === "invalid") {
+          await logRejected({
+            action: "auth.reset_password_token_check_rejected",
+            message: `Statut du token de reset password: ${status}`,
+          });
+        }
+
+        return { status };
+      } catch (err) {
+        await logFailure({
+          action: "auth.reset_password_token_check_failed",
+          message: "Échec technique lors de la vérification du token de reset",
+          error: err,
+        });
+        throw err;
+      }
     },
     { query: t.Object({ token: t.String() }) },
   )
@@ -63,7 +110,20 @@ export const userAuthRoute = new Elysia({ prefix: "/user" })
           },
           headers: new Headers(),
         });
-      } catch {}
+
+        await logSuccess({
+          action: "auth.reset_password_resent",
+          message: `Lien de réinitialisation renvoyé à ${email}`,
+          userEmail: email,
+        });
+      } catch (err) {
+        await logFailure({
+          action: "auth.reset_password_resend_failed",
+          message: `Échec du renvoi du lien de reset password pour ${email}`,
+          userEmail: email,
+          error: err,
+        });
+      }
 
       return {
         message:

@@ -1,22 +1,26 @@
 import { app } from "./app";
 import { envPlugin as env } from "../plugins/env";
-import { socketHandlers } from "../realtime/lib/io";
+import { createRealtime } from "../realtime/lib/io";
 
-const { websocket, ...engineFetchHandlers } = socketHandlers;
+const PORT = env.decorator.env.PORT;
+
+const { engine } = createRealtime({
+  corsOrigin: env.decorator.env.CLIENT_URL,
+});
+
+const { websocket, ...engineHandlers } = engine.handler();
 
 Bun.serve({
-  port: env.decorator.env.PORT,
-  idleTimeout: 30, // doit être > pingInterval de socket.io (défaut 25s)
+  port: PORT,
+  idleTimeout: 30,
   fetch(req, server) {
     const url = new URL(req.url);
     if (url.pathname.startsWith("/socket.io")) {
-      return engineFetchHandlers.fetch(req, server);
+      return engineHandlers.fetch(req, server);
     }
     return app.handle(req);
   },
   websocket,
 });
 
-console.log(
-  `🦊 Elysia + socket.io en écoute sur le port ${env.decorator.env.PORT}`,
-);
+console.log(`🦊 Elysia + socket.io en écoute sur le port ${PORT}`);

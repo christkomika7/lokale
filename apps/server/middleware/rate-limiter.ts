@@ -1,16 +1,15 @@
 import { Elysia } from "elysia";
-import { MAX_REQUESTS, WINDOW_MS } from "@lokale/config/auth/rate-limiter";
+import {
+  bannedIpCache,
+  BLOCKED_LOG_THROTTLE_MS,
+  blockedLogCache,
+  MAX_REQUESTS,
+  rateLimitCache,
+  WINDOW_MS,
+} from "@lokale/config/auth/rate-limiter";
 import { prisma } from "../lib/prisma";
 import { getIP, getUserIdFromSession, applyBan } from "../lib/rate";
-
-const rateLimitCache = new Map<
-  string,
-  { count: number; lastRequest: number }
->();
-const bannedIpCache = new Map<
-  string,
-  { banExpires: number | null; banReason: string | null }
->();
+import { logRejected } from "../lib/logs";
 
 setInterval(
   () => {
@@ -20,6 +19,10 @@ setInterval(
     }
     for (const [ip, val] of bannedIpCache) {
       if (val.banExpires && val.banExpires < now) bannedIpCache.delete(ip);
+    }
+    for (const [ip, lastLogged] of blockedLogCache) {
+      if (now - lastLogged > BLOCKED_LOG_THROTTLE_MS)
+        blockedLogCache.delete(ip);
     }
   },
   5 * 60 * 1000,
@@ -52,6 +55,23 @@ export const rateLimiter = new Elysia({ name: "rate-limiter" })
       const isExpired = banned.banExpires && banned.banExpires < now;
 
       if (isPermanent || !isExpired) {
+        const lastLogged = blockedLogCache.get(clientIP);
+        if (!lastLogged || now - lastLogged > BLOCKED_LOG_THROTTLE_MS) {
+          blockedLogCache.set(clientIP, now);
+          await logRejected({
+            action: "rate_limit.blocked_request",
+            message: `Requête bloquée sur IP bannie (${pathname})`,
+            targetType: "ip",
+            targetId: clientIP,
+            ipAddress: clientIP,
+            metadata: {
+              pathname,
+              banReason: banned.banReason,
+              isPermanent,
+            },
+          });
+        }
+
         const retryAfter = banned.banExpires
           ? Math.ceil((banned.banExpires - now) / 1000)
           : null;

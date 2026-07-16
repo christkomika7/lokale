@@ -84,6 +84,7 @@ enum UserCreationSource {
 enum LogStatus {
     SUCCESS
     FAILURE
+    WARNING
     PENDING
     CANCELLED
 }

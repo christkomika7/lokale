@@ -1,6 +1,7 @@
 import { formatBanDuration, getBanDuration } from "@lokale/lib/date";
 import { auth } from "./auth";
 import { prisma } from "./prisma";
+import { logActivity } from "./logs";
 
 export function getIP(request: Request, server: any): string {
   return (
@@ -56,6 +57,19 @@ export async function applyBan(ip: string, userId: string | null) {
       create: { userId, ipId: ipRecord.id },
     });
   }
+
+  // WARNING (même en cas de "succès" applicatif) : c'est un signal de
+  // sécurité à surveiller, même logique que /admin/ban-user dans auth.ts.
+  await logActivity({
+    action: "rate_limit.ip_banned",
+    status: "SUCCESS",
+    level: violations >= 3 ? "CRITICAL" : "WARNING",
+    message: `IP bannie automatiquement (${label}) — violation #${violations}`,
+    userId: userId ?? undefined,
+    targetType: "ip",
+    targetId: ip,
+    metadata: { violations, banDurationLabel: label },
+  });
 
   return { violations, banExpires, label };
 }

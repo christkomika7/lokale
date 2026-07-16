@@ -8,3 +8,14 @@ export const BAN_DURATIONS: Record<number, number | null> = {
   5: 30 * 24 * 60 * 60 * 1000, // 5ème : 1 mois
   6: null, // 6ème : permanent
 };
+export const blockedLogCache = new Map<string, number>();
+export const BLOCKED_LOG_THROTTLE_MS = 5 * 60 * 1000;
+
+export const rateLimitCache = new Map<
+  string,
+  { count: number; lastRequest: number }
+>();
+export const bannedIpCache = new Map<
+  string,
+  { banExpires: number | null; banReason: string | null }
+>();

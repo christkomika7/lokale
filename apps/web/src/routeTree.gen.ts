@@ -25,6 +25,8 @@ import { Route as privateUserIndexRouteImport } from './routes/(private)/user/in
 import { Route as privateAdminIndexRouteImport } from './routes/(private)/admin/index'
 import { Route as privateAdminWorkspaceRouteImport } from './routes/(private)/admin/workspace'
 import { Route as privateAdminUsersRouteImport } from './routes/(private)/admin/users'
+import { Route as privateAdminSettingsIndexRouteImport } from './routes/(private)/admin/settings/index'
+import { Route as privateAdminMonitoringIndexRouteImport } from './routes/(private)/admin/monitoring/index'
 
 const publicRouteRoute = publicRouteRouteImport.update({
   id: '/(public)',
@@ -104,6 +106,18 @@ const privateAdminUsersRoute = privateAdminUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => privateAdminRouteRoute,
 } as any)
+const privateAdminSettingsIndexRoute =
+  privateAdminSettingsIndexRouteImport.update({
+    id: '/settings/',
+    path: '/settings/',
+    getParentRoute: () => privateAdminRouteRoute,
+  } as any)
+const privateAdminMonitoringIndexRoute =
+  privateAdminMonitoringIndexRouteImport.update({
+    id: '/monitoring/',
+    path: '/monitoring/',
+    getParentRoute: () => privateAdminRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/admin': typeof privateAdminRouteRouteWithChildren
@@ -120,6 +134,8 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof privateAdminIndexRoute
   '/user/': typeof privateUserIndexRoute
   '/workspace/': typeof privateWorkspaceIndexRoute
+  '/admin/monitoring/': typeof privateAdminMonitoringIndexRoute
+  '/admin/settings/': typeof privateAdminSettingsIndexRoute
 }
 export interface FileRoutesByTo {
   '/forgot-password': typeof authForgotPasswordRoute
@@ -135,6 +151,8 @@ export interface FileRoutesByTo {
   '/admin': typeof privateAdminIndexRoute
   '/user': typeof privateUserIndexRoute
   '/workspace': typeof privateWorkspaceIndexRoute
+  '/admin/monitoring': typeof privateAdminMonitoringIndexRoute
+  '/admin/settings': typeof privateAdminSettingsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -154,6 +172,8 @@ export interface FileRoutesById {
   '/(private)/admin/': typeof privateAdminIndexRoute
   '/(private)/user/': typeof privateUserIndexRoute
   '/(private)/workspace/': typeof privateWorkspaceIndexRoute
+  '/(private)/admin/monitoring/': typeof privateAdminMonitoringIndexRoute
+  '/(private)/admin/settings/': typeof privateAdminSettingsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -172,6 +192,8 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/user/'
     | '/workspace/'
+    | '/admin/monitoring/'
+    | '/admin/settings/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/forgot-password'
@@ -187,6 +209,8 @@ export interface FileRouteTypes {
     | '/admin'
     | '/user'
     | '/workspace'
+    | '/admin/monitoring'
+    | '/admin/settings'
   id:
     | '__root__'
     | '/(private)'
@@ -205,6 +229,8 @@ export interface FileRouteTypes {
     | '/(private)/admin/'
     | '/(private)/user/'
     | '/(private)/workspace/'
+    | '/(private)/admin/monitoring/'
+    | '/(private)/admin/settings/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -332,6 +358,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof privateAdminUsersRouteImport
       parentRoute: typeof privateAdminRouteRoute
     }
+    '/(private)/admin/settings/': {
+      id: '/(private)/admin/settings/'
+      path: '/settings'
+      fullPath: '/admin/settings/'
+      preLoaderRoute: typeof privateAdminSettingsIndexRouteImport
+      parentRoute: typeof privateAdminRouteRoute
+    }
+    '/(private)/admin/monitoring/': {
+      id: '/(private)/admin/monitoring/'
+      path: '/monitoring'
+      fullPath: '/admin/monitoring/'
+      preLoaderRoute: typeof privateAdminMonitoringIndexRouteImport
+      parentRoute: typeof privateAdminRouteRoute
+    }
   }
 }
 
@@ -339,12 +379,16 @@ interface privateAdminRouteRouteChildren {
   privateAdminUsersRoute: typeof privateAdminUsersRoute
   privateAdminWorkspaceRoute: typeof privateAdminWorkspaceRoute
   privateAdminIndexRoute: typeof privateAdminIndexRoute
+  privateAdminMonitoringIndexRoute: typeof privateAdminMonitoringIndexRoute
+  privateAdminSettingsIndexRoute: typeof privateAdminSettingsIndexRoute
 }
 
 const privateAdminRouteRouteChildren: privateAdminRouteRouteChildren = {
   privateAdminUsersRoute: privateAdminUsersRoute,
   privateAdminWorkspaceRoute: privateAdminWorkspaceRoute,
   privateAdminIndexRoute: privateAdminIndexRoute,
+  privateAdminMonitoringIndexRoute: privateAdminMonitoringIndexRoute,
+  privateAdminSettingsIndexRoute: privateAdminSettingsIndexRoute,
 }
 
 const privateAdminRouteRouteWithChildren =

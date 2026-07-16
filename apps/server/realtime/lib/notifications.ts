@@ -26,13 +26,10 @@ function toPayload(n: {
     id: n.id,
     userId: n.userId,
     type: n.type,
-    category: n.category ?? undefined,
     title: n.title,
     message: n.message,
     data: (n.data as Record<string, unknown>) ?? undefined,
     isRead: n.isRead,
-    actionUrl: n.actionUrl ?? undefined,
-    icon: n.icon ?? undefined,
     createdAt: n.createdAt.toISOString(),
   };
 }

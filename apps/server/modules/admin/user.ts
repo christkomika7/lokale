@@ -11,6 +11,12 @@ import { addMonths } from "@lokale/lib/date";
 import { SORTABLE_FIELDS } from "@lokale/config/filter";
 import type { SortableKey } from "@lokale/types/filter";
 import { envPlugin as env } from "../../plugins/env";
+import {
+  logSuccess,
+  logRejected,
+  logFailure,
+  logActivity,
+} from "../../lib/logs";
 
 export const userRoute = new Elysia({ prefix: "/users" })
   .use(env)
@@ -44,30 +50,15 @@ export const userRoute = new Elysia({ prefix: "/users" })
         });
       }
 
-      if (role) {
-        where.role = role as Role;
-      }
-
-      if (status) {
-        andConditions.push(buildStatusWhere(status as UserStatus));
-      }
-
-      if (typeof banned === "boolean") {
-        where.banned = banned;
-      }
-
+      if (role) where.role = role as Role;
+      if (status) andConditions.push(buildStatusWhere(status as UserStatus));
+      if (typeof banned === "boolean") where.banned = banned;
       if (plan) {
         where.subscriptions = {
-          some: {
-            status: "ACTIVE",
-            plan: { code: plan as Plan },
-          },
+          some: { status: "ACTIVE", plan: { code: plan as Plan } },
         };
       }
-
-      if (andConditions.length > 0) {
-        where.AND = andConditions;
-      }
+      if (andConditions.length > 0) where.AND = andConditions;
 
       const orderField = SORTABLE_FIELDS[sortBy as SortableKey] ?? "createdAt";
       const orderBy: Prisma.UserOrderByWithRelationInput = {
@@ -82,19 +73,14 @@ export const userRoute = new Elysia({ prefix: "/users" })
           take: currentPageSize,
           include: {
             ips: { include: { ip: true } },
-            sessions: {
-              select: { userAgent: true },
-              distinct: ["userAgent"],
-            },
+            sessions: { select: { userAgent: true }, distinct: ["userAgent"] },
             subscriptions: {
               where: { status: "ACTIVE" },
               orderBy: { createdAt: "desc" },
               take: 1,
               include: { plan: true },
             },
-            _count: {
-              select: { actionSubmissions: true },
-            },
+            _count: { select: { actionSubmissions: true } },
           },
         }),
         prisma.user.count({ where }),
@@ -140,16 +126,15 @@ export const userRoute = new Elysia({ prefix: "/users" })
         };
       });
 
-      const response: PaginatedResponse<User> & {
-        totalUsersAllTime: number;
-      } = {
-        items,
-        page: currentPage,
-        pageSize: currentPageSize,
-        totalItems,
-        totalPages: Math.max(1, Math.ceil(totalItems / currentPageSize)),
-        totalUsersAllTime,
-      };
+      const response: PaginatedResponse<User> & { totalUsersAllTime: number } =
+        {
+          items,
+          page: currentPage,
+          pageSize: currentPageSize,
+          totalItems,
+          totalPages: Math.max(1, Math.ceil(totalItems / currentPageSize)),
+          totalUsersAllTime,
+        };
 
       return response;
     },
@@ -205,16 +190,24 @@ export const userRoute = new Elysia({ prefix: "/users" })
           where: { OR: [{ email }, ...(phone ? [{ phone }] : [])] },
         });
         if (existing) {
-          if (existing.email === email) {
-            return status(400, {
-              code: "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL",
-              message: "Email already exists",
-            });
-          }
-          return status(400, {
-            code: "PHONE_ALREADY_EXISTS",
-            message: "Phone already exists",
+          const field = existing.email === email ? "email" : "phone";
+          await logRejected({
+            action: "user.create_rejected",
+            message:
+              field === "email"
+                ? `Tentative de création d'un utilisateur avec un email déjà existant: ${email}`
+                : `Tentative de création d'un utilisateur avec un téléphone déjà existant: ${phone}`,
+            userEmail: email,
           });
+          return field === "email"
+            ? status(400, {
+                code: "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL",
+                message: "Email already exists",
+              })
+            : status(400, {
+                code: "PHONE_ALREADY_EXISTS",
+                message: "Phone already exists",
+              });
         }
 
         const newUser = await prisma.user.create({
@@ -250,6 +243,11 @@ export const userRoute = new Elysia({ prefix: "/users" })
       } catch (err: any) {
         if (err.code === "P2002") {
           const field = err.meta?.target?.[0];
+          await logRejected({
+            action: "user.create_rejected",
+            message: `Contrainte unique violée à la création (${field})`,
+            userEmail: email,
+          });
           return status(400, {
             code:
               field === "phone"
@@ -261,6 +259,13 @@ export const userRoute = new Elysia({ prefix: "/users" })
                 : "Email already exists",
           });
         }
+        await logFailure({
+          action: "user.create_failed",
+          message:
+            "Échec technique lors de la création d'un utilisateur (admin)",
+          userEmail: email,
+          error: err,
+        });
         console.error(err);
         return status(500, {
           message: "Une erreur est survenue",
@@ -292,10 +297,7 @@ export const userRoute = new Elysia({ prefix: "/users" })
 
           await prisma.$transaction(async (tx) => {
             await tx.subscription.updateMany({
-              where: {
-                userId,
-                status: { in: ["ACTIVE", "PENDING_PAYMENT"] },
-              },
+              where: { userId, status: { in: ["ACTIVE", "PENDING_PAYMENT"] } },
               data: { status: "CANCELLED" },
             });
 
@@ -338,6 +340,7 @@ export const userRoute = new Elysia({ prefix: "/users" })
           if (withSub) Object.assign(updated, withSub);
         }
       }
+
       if (emailVerified) {
         await sendWelcomeEmail({ address: email, name }, name);
       } else {
@@ -348,6 +351,15 @@ export const userRoute = new Elysia({ prefix: "/users" })
           })
           .catch(console.error);
       }
+
+      await logSuccess({
+        action: "user.created",
+        message: `Utilisateur créé par un admin: ${email}`,
+        userId,
+        userEmail: email,
+        targetType: "user",
+        targetId: userId,
+      });
 
       const activePlan = updated.subscriptions[0]?.plan.code ?? "FREE";
       const mappedRole =
@@ -398,6 +410,12 @@ export const userRoute = new Elysia({ prefix: "/users" })
       const user = await prisma.user.findUnique({ where: { id: params.id } });
 
       if (!user) {
+        await logRejected({
+          action: "user.update_rejected",
+          message: `Tentative de modification d'un utilisateur introuvable: ${params.id}`,
+          targetType: "user",
+          targetId: params.id,
+        });
         return status(404, {
           code: "USER_NOT_FOUND",
           message: "Utilisateur introuvable",
@@ -411,6 +429,18 @@ export const userRoute = new Elysia({ prefix: "/users" })
           where: { phone, NOT: { id: user.id } },
         });
         if (existing) {
+          await logRejected({
+            action: "user.update_rejected",
+            userRole: user.role,
+            userName: `${user?.firstname} ${user?.lastname}`,
+            userEmail: user.email,
+            message: `Téléphone déjà utilisé lors de la modification: ${phone}`,
+            targetType: "user",
+            targetId: user.id,
+            metadata: {
+              newPhone: phone,
+            },
+          });
           return status(400, {
             code: "PHONE_ALREADY_EXISTS",
             message: "Ce numéro de téléphone est déjà utilisé",
@@ -441,6 +471,16 @@ export const userRoute = new Elysia({ prefix: "/users" })
           },
           _count: { select: { actionSubmissions: true } },
         },
+      });
+
+      await logSuccess({
+        action: "user.updated",
+        userRole: user.role,
+        userName: `${user?.firstname} ${user?.lastname}`,
+        userEmail: user.email,
+        message: `Utilisateur mis à jour par un admin: ${updated.email}`,
+        targetType: "user",
+        targetId: updated.id,
       });
 
       const activePlan = updated.subscriptions[0]?.plan.code ?? "FREE";
@@ -492,12 +532,17 @@ export const userRoute = new Elysia({ prefix: "/users" })
       }),
     },
   )
-
   .patch(
     "/plan/:id",
     async ({ params, body, status }) => {
       const user = await prisma.user.findUnique({ where: { id: params.id } });
       if (!user) {
+        await logRejected({
+          action: "user.plan_change_rejected",
+          message: `Tentative de changement de plan sur un utilisateur introuvable: ${params.id}`,
+          targetType: "user",
+          targetId: params.id,
+        });
         return status(404, {
           code: "USER_NOT_FOUND",
           message: "Utilisateur introuvable",
@@ -505,12 +550,17 @@ export const userRoute = new Elysia({ prefix: "/users" })
       }
 
       const keepRole = user.role === $Enums.Role.ADMIN;
-
       const isPaidPlan = body.plan !== "FREE";
       const roleAllowsPaidPlan =
         user.role === $Enums.Role.WORKSPACE || user.role === $Enums.Role.ADMIN;
 
       if (isPaidPlan && !roleAllowsPaidPlan) {
+        await logRejected({
+          action: "user.plan_change_rejected",
+          message: `Plan payant refusé (rôle incompatible) pour ${user.email}`,
+          targetType: "user",
+          targetId: user.id,
+        });
         return status(400, {
           code: "PLAN_ROLE_MISMATCH",
           message:
@@ -538,6 +588,16 @@ export const userRoute = new Elysia({ prefix: "/users" })
           return cancelled.count;
         });
 
+        await logSuccess({
+          action: "user.plan_changed",
+          userRole: user.role,
+          userName: `${user?.firstname} ${user?.lastname}`,
+          userEmail: user.email,
+          message: `Utilisateur repassé au plan FREE: ${user.email}`,
+          targetType: "user",
+          targetId: user.id,
+        });
+
         return {
           message: "Utilisateur repassé au plan FREE",
           previousSubscriptionCancelled: result > 0,
@@ -549,6 +609,12 @@ export const userRoute = new Elysia({ prefix: "/users" })
       });
 
       if (!planRecord) {
+        await logRejected({
+          action: "user.plan_change_rejected",
+          message: `Plan introuvable: ${body.plan}`,
+          targetType: "user",
+          targetId: user.id,
+        });
         return status(400, {
           code: "PLAN_NOT_FOUND",
           message: "Plan introuvable",
@@ -596,6 +662,16 @@ export const userRoute = new Elysia({ prefix: "/users" })
         return cancelled.count;
       });
 
+      await logSuccess({
+        action: "user.plan_changed",
+        userRole: user.role,
+        userName: `${user?.firstname} ${user?.lastname}`,
+        userEmail: user.email,
+        message: `Plan changé pour ${body.plan}: ${user.email}`,
+        targetType: "user",
+        targetId: user.id,
+      });
+
       return {
         message: `Plan changé pour ${body.plan}`,
         previousSubscriptionCancelled: cancelledCount > 0,
@@ -618,6 +694,12 @@ export const userRoute = new Elysia({ prefix: "/users" })
     async ({ params, status }) => {
       const user = await prisma.user.findUnique({ where: { id: params.id } });
       if (!user) {
+        await logRejected({
+          action: "user.subscription_cancel_rejected",
+          message: `Utilisateur introuvable: ${params.id}`,
+          targetType: "user",
+          targetId: params.id,
+        });
         return status(404, {
           code: "USER_NOT_FOUND",
           message: "Utilisateur introuvable",
@@ -630,6 +712,12 @@ export const userRoute = new Elysia({ prefix: "/users" })
       });
 
       if (!activeSubscription) {
+        await logRejected({
+          action: "user.subscription_cancel_rejected",
+          message: `Aucun abonnement actif pour ${user.email}`,
+          targetType: "user",
+          targetId: user.id,
+        });
         return status(400, {
           code: "NO_ACTIVE_SUBSCRIPTION",
           message: "Aucun abonnement actif pour cet utilisateur",
@@ -648,6 +736,16 @@ export const userRoute = new Elysia({ prefix: "/users" })
             data: { role: $Enums.Role.USER },
           });
         }
+      });
+
+      await logSuccess({
+        action: "user.subscription_cancelled",
+        userRole: user.role,
+        userName: `${user?.firstname} ${user?.lastname}`,
+        userEmail: user.email,
+        message: `Abonnement annulé pour ${user.email}`,
+        targetType: "user",
+        targetId: user.id,
       });
 
       return { message: "Abonnement annulé" };
@@ -669,6 +767,12 @@ export const userRoute = new Elysia({ prefix: "/users" })
       });
 
       if (!user) {
+        await logRejected({
+          action: "user.role_change_rejected",
+          message: `Utilisateur introuvable: ${params.id}`,
+          targetType: "user",
+          targetId: params.id,
+        });
         return status(404, {
           code: "USER_NOT_FOUND",
           message: "Utilisateur introuvable",
@@ -709,6 +813,18 @@ export const userRoute = new Elysia({ prefix: "/users" })
         });
       });
 
+      await logActivity({
+        action: "user.role_changed",
+        status: "SUCCESS",
+        level: "WARNING",
+        userRole: user.role,
+        userName: `${user?.firstname} ${user?.lastname}`,
+        userEmail: user.email,
+        message: `Rôle modifié vers ${body.role} pour ${user.email}`,
+        targetType: "user",
+        targetId: user.id,
+      });
+
       return {
         message: `Rôle mis à jour: ${body.role}`,
         subscriptionCancelled: shouldCancelSubscription,
@@ -730,15 +846,16 @@ export const userRoute = new Elysia({ prefix: "/users" })
     async ({ params, body, status }) => {
       const user = await prisma.user.findUnique({
         where: { id: params.id },
-        include: {
-          subscriptions: {
-            where: { status: "ACTIVE" },
-            take: 1,
-          },
-        },
+        include: { subscriptions: { where: { status: "ACTIVE" }, take: 1 } },
       });
 
       if (!user) {
+        await logRejected({
+          action: "user.suspend_rejected",
+          message: `Utilisateur introuvable: ${params.id}`,
+          targetType: "user",
+          targetId: params.id,
+        });
         return status(404, {
           code: "USER_NOT_FOUND",
           message: "Utilisateur introuvable",
@@ -764,12 +881,21 @@ export const userRoute = new Elysia({ prefix: "/users" })
         if (user.role === "WORKSPACE" && activeSubscription) {
           await tx.subscription.update({
             where: { id: activeSubscription.id },
-            data: {
-              status: "PAUSED",
-              pausedAt: new Date(),
-            },
+            data: { status: "PAUSED", pausedAt: new Date() },
           });
         }
+      });
+
+      await logActivity({
+        action: "user.suspended",
+        status: "SUCCESS",
+        level: "WARNING",
+        userRole: user.role,
+        userName: `${user?.firstname} ${user?.lastname}`,
+        userEmail: user.email,
+        message: `Compte suspendu pour ${durationDays} jour(s): ${user.email}`,
+        targetType: "user",
+        targetId: user.id,
       });
 
       return { message: `Compte suspendu pour ${durationDays} jour(s)` };
@@ -787,15 +913,16 @@ export const userRoute = new Elysia({ prefix: "/users" })
     async ({ params, status }) => {
       const user = await prisma.user.findUnique({
         where: { id: params.id },
-        include: {
-          subscriptions: {
-            where: { status: "PAUSED" },
-            take: 1,
-          },
-        },
+        include: { subscriptions: { where: { status: "PAUSED" }, take: 1 } },
       });
 
       if (!user) {
+        await logRejected({
+          action: "user.reactivate_rejected",
+          message: `Utilisateur introuvable: ${params.id}`,
+          targetType: "user",
+          targetId: params.id,
+        });
         return status(404, {
           code: "USER_NOT_FOUND",
           message: "Utilisateur introuvable",
@@ -803,6 +930,15 @@ export const userRoute = new Elysia({ prefix: "/users" })
       }
 
       if (!user.banned) {
+        await logRejected({
+          action: "user.reactivate_rejected",
+          userRole: user.role,
+          userName: `${user?.firstname} ${user?.lastname}`,
+          userEmail: user.email,
+          message: `Utilisateur non suspendu: ${user.email}`,
+          targetType: "user",
+          targetId: user.id,
+        });
         return status(400, {
           code: "USER_NOT_SUSPENDED",
           message: "Cet utilisateur n'est pas suspendu",
@@ -814,16 +950,11 @@ export const userRoute = new Elysia({ prefix: "/users" })
       await prisma.$transaction(async (tx) => {
         await tx.user.update({
           where: { id: params.id },
-          data: {
-            banned: false,
-            banReason: null,
-            banExpires: null,
-          },
+          data: { banned: false, banReason: null, banExpires: null },
         });
 
         if (pausedSubscription?.pausedAt) {
           const pausedMs = Date.now() - pausedSubscription.pausedAt.getTime();
-
           await tx.subscription.update({
             where: { id: pausedSubscription.id },
             data: {
@@ -837,6 +968,13 @@ export const userRoute = new Elysia({ prefix: "/users" })
         }
       });
 
+      await logSuccess({
+        action: "user.reactivated",
+        message: `Compte réactivé: ${user.email}`,
+        targetType: "user",
+        targetId: user.id,
+      });
+
       return { message: "Compte réactivé" };
     },
     { params: t.Object({ id: t.String() }) },
@@ -846,6 +984,12 @@ export const userRoute = new Elysia({ prefix: "/users" })
     async ({ params, body, status }) => {
       const user = await prisma.user.findUnique({ where: { id: params.id } });
       if (!user) {
+        await logRejected({
+          action: "user.ban_rejected",
+          message: `Utilisateur introuvable: ${params.id}`,
+          targetType: "user",
+          targetId: params.id,
+        });
         return status(404, {
           code: "USER_NOT_FOUND",
           message: "Utilisateur introuvable",
@@ -857,8 +1001,20 @@ export const userRoute = new Elysia({ prefix: "/users" })
         data: {
           banned: true,
           banReason: body.reason ?? "Bannissement administratif",
-          banExpires: null, // null = permanent
+          banExpires: null,
         },
+      });
+
+      await logActivity({
+        action: "user.banned",
+        status: "SUCCESS",
+        level: "WARNING",
+        userRole: user.role,
+        userName: `${user?.firstname} ${user?.lastname}`,
+        userEmail: user.email,
+        message: `Compte banni définitivement: ${user.email}`,
+        targetType: "user",
+        targetId: user.id,
       });
 
       return { message: "Compte banni définitivement" };
@@ -873,15 +1029,16 @@ export const userRoute = new Elysia({ prefix: "/users" })
     async ({ params, status }) => {
       const user = await prisma.user.findUnique({
         where: { id: params.id },
-        include: {
-          subscriptions: {
-            where: { status: "PAUSED" },
-            take: 1,
-          },
-        },
+        include: { subscriptions: { where: { status: "PAUSED" }, take: 1 } },
       });
 
       if (!user) {
+        await logRejected({
+          action: "user.unban_rejected",
+          message: `Utilisateur introuvable: ${params.id}`,
+          targetType: "user",
+          targetId: params.id,
+        });
         return status(404, {
           code: "USER_NOT_FOUND",
           message: "Utilisateur introuvable",
@@ -893,16 +1050,11 @@ export const userRoute = new Elysia({ prefix: "/users" })
       await prisma.$transaction(async (tx) => {
         await tx.user.update({
           where: { id: params.id },
-          data: {
-            banned: false,
-            banReason: null,
-            banExpires: null,
-          },
+          data: { banned: false, banReason: null, banExpires: null },
         });
 
         if (pausedSubscription?.pausedAt) {
           const pausedMs = Date.now() - pausedSubscription.pausedAt.getTime();
-
           await tx.subscription.update({
             where: { id: pausedSubscription.id },
             data: {
@@ -916,6 +1068,16 @@ export const userRoute = new Elysia({ prefix: "/users" })
         }
       });
 
+      await logSuccess({
+        action: "user.unbanned",
+        userRole: user.role,
+        userName: `${user?.firstname} ${user?.lastname}`,
+        userEmail: user.email,
+        message: `Utilisateur débanni: ${user.email}`,
+        targetType: "user",
+        targetId: user.id,
+      });
+
       return { message: "Compte réactivé" };
     },
     { params: t.Object({ id: t.String() }) },
@@ -925,6 +1087,12 @@ export const userRoute = new Elysia({ prefix: "/users" })
     async ({ params, status }) => {
       const user = await prisma.user.findUnique({ where: { id: params.id } });
       if (!user) {
+        await logRejected({
+          action: "user.reset_password_send_rejected",
+          message: `Utilisateur introuvable: ${params.id}`,
+          targetType: "user",
+          targetId: params.id,
+        });
         return status(404, {
           code: "USER_NOT_FOUND",
           message: "Utilisateur introuvable",
@@ -939,9 +1107,17 @@ export const userRoute = new Elysia({ prefix: "/users" })
         headers: new Headers(),
       });
 
-      return {
-        message: `Lien de réinitialisation envoyé à ${user.email}`,
-      };
+      await logSuccess({
+        userRole: user.role,
+        userName: `${user?.firstname} ${user?.lastname}`,
+        userEmail: user.email,
+        action: "user.reset_password_sent",
+        message: `Lien de réinitialisation envoyé (admin) à ${user.email}`,
+        targetType: "user",
+        targetId: user.id,
+      });
+
+      return { message: `Lien de réinitialisation envoyé à ${user.email}` };
     },
     { params: idSchema },
   )
@@ -950,12 +1126,31 @@ export const userRoute = new Elysia({ prefix: "/users" })
     async ({ params, status }) => {
       const user = await prisma.user.findUnique({ where: { id: params.id } });
       if (!user) {
+        await logRejected({
+          action: "user.delete_rejected",
+          message: `Utilisateur introuvable: ${params.id}`,
+          targetType: "user",
+          targetId: params.id,
+        });
         return status(404, {
           code: "USER_NOT_FOUND",
           message: "Utilisateur introuvable",
         });
       }
       await prisma.user.delete({ where: { id: params.id } });
+
+      // CRITICAL: suppression définitive, action irréversible.
+      await logActivity({
+        action: "user.deleted",
+        status: "SUCCESS",
+        level: "CRITICAL",
+        userRole: user.role,
+        userName: `${user?.firstname} ${user?.lastname}`,
+        userEmail: user.email,
+        message: `Compte supprimé définitivement: ${user.email}`,
+        targetType: "user",
+        targetId: user.id,
+      });
 
       return { message: "Compte supprimé définitivement" };
     },

@@ -109,7 +109,7 @@ export interface ConversationPayload {
 export interface ActivityLogPayload {
   id: string;
   action: string;
-  status: "SUCCESS" | "FAILURE" | "PENDING" | "CANCELLED";
+  status: "SUCCESS" | "WARNING" | "FAILURE" | "PENDING" | "CANCELLED";
   level: "DEBUG" | "INFO" | "WARNING" | "ERROR" | "CRITICAL";
   message: string;
   userId?: string;
@@ -125,9 +125,12 @@ export interface NotificationPayload {
   id: string;
   userId: string;
   type: string;
+  category?: string;
   title: string;
-  body?: string;
+  message: string;
   data?: Record<string, unknown>;
-  read: boolean;
+  isRead: boolean;
+  actionUrl?: string;
+  icon?: string;
   createdAt: string;
 }

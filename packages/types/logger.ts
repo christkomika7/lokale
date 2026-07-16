@@ -1,8 +1,6 @@
 import type { Role } from "./user";
 import { LogAction } from "../config/logger";
 
-export type LogLevel = "DEBUG" | "INFO" | "WARNING" | "ERROR" | "CRITICAL";
-export type LogStatus = "SUCCESS" | "ERROR" | "WARNING" | "PENDING";
 export type LogActionType = (typeof LogAction)[keyof typeof LogAction] | string;
 
 export interface LogActor {
@@ -24,11 +22,11 @@ export interface BaseLogInput {
   durationMs?: number;
 }
 
-export interface ErrorLogInput extends BaseLogInput {
+export interface ErrorLogInput<T> extends BaseLogInput {
   error?: unknown;
-  level?: LogLevel;
+  level?: T;
 }
 
-export interface WarningLogInput extends BaseLogInput {
-  level?: LogLevel;
+export interface WarningLogInput<T> extends BaseLogInput {
+  level?: T;
 }

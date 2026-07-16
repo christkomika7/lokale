@@ -1,12 +1,10 @@
-import { Prisma } from "../generated/prisma/client";
+import { LogLevel, LogStatus, Prisma } from "../generated/prisma/client";
 import { serializeError } from "./helpers";
 import { prisma } from "./prisma";
-import {
+import type {
   BaseLogInput,
   ErrorLogInput,
   WarningLogInput,
-  LogLevel,
-  LogStatus,
 } from "@lokale/types/logger";
 
 class ActivityLogger {
@@ -14,7 +12,7 @@ class ActivityLogger {
     return this.write({ ...input, status: "SUCCESS", level: "INFO" });
   }
 
-  async warning(input: WarningLogInput) {
+  async warning(input: WarningLogInput<LogLevel>) {
     return this.write({
       ...input,
       status: "WARNING",
@@ -22,10 +20,10 @@ class ActivityLogger {
     });
   }
 
-  async error(input: ErrorLogInput) {
+  async error(input: ErrorLogInput<LogLevel>) {
     return this.write({
       ...input,
-      status: "ERROR",
+      status: "FAILURE",
       level: input.level ?? "ERROR",
       errorRaw: serializeError(input.error),
     });

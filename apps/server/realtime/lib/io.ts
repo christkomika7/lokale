@@ -1,14 +1,4 @@
-// Socket.io tourne sur un serveur HTTP dédié (port séparé), dans le MÊME
-// process Bun que ton Elysia app. C'est l'approche la plus fiable avec Bun :
-// l'intégration "attach direct sur Bun.serve()" de socket.io est encore
-// expérimentale selon les versions, alors qu'un http.Server node-compat
-// (que Bun supporte nativement) est stable à 100%.
-//
-// Ton front se connecte simplement sur un port différent (ex: 3001 à côté
-// de ton API sur 3000), ou tu passes par un reverse-proxy en prod qui route
-// /socket.io vers ce port.
-
-import { createServer } from "node:http";
+import { Server as Engine } from "@socket.io/bun-engine";
 import { Server, type Socket } from "socket.io";
 import type {
   AuthedSocketUser,
@@ -27,10 +17,7 @@ export type AppSocket = Socket<
   SocketData
 >;
 
-// Présence en mémoire. Pour du multi-instance (plusieurs process/serveurs),
-// remplace cette Map par l'adapter Redis officiel de socket.io
-// (@socket.io/redis-adapter) + un store de présence partagé (Redis aussi).
-const onlineUsers = new Map<string, Set<string>>(); // userId -> set of socket ids
+const onlineUsers = new Map<string, Set<string>>();
 
 let ioInstance: Server<
   ClientToServerEvents,
@@ -42,39 +29,35 @@ let ioInstance: Server<
 export function getIO() {
   if (!ioInstance) {
     throw new Error(
-      "Realtime server non initialisé. Appelle startRealtimeServer() au boot de ton app.",
+      "Realtime server non initialisé. Appelle createRealtime() au boot de ton app.",
     );
   }
   return ioInstance;
 }
 
-interface StartRealtimeServerOptions {
-  port: number;
+interface CreateRealtimeOptions {
   corsOrigin: string | string[];
 }
 
-export function startRealtimeServer({
-  port,
-  corsOrigin,
-}: StartRealtimeServerOptions) {
-  const httpServer = createServer();
-
+export function createRealtime({ corsOrigin }: CreateRealtimeOptions) {
   const io = new Server<
     ClientToServerEvents,
     ServerToClientEvents,
     InterServerEvents,
     SocketData
-  >(httpServer, {
+  >({
     cors: {
       origin: corsOrigin,
       credentials: true,
     },
   });
 
-  // --- Authentification à la connexion ---
-  // Le client passe le cookie de session Better Auth (credentials: true côté
-  // client) ou un token dans `auth.token` du handshake. On vérifie via
-  // Better Auth directement, pas de JWT maison à maintenir en double.
+  const engine = new Engine({
+    path: "/socket.io/",
+  });
+
+  io.bind(engine);
+
   io.use(async (socket, next) => {
     try {
       const cookieHeader = socket.handshake.headers.cookie ?? "";
@@ -99,7 +82,7 @@ export function startRealtimeServer({
 
       socket.data.user = user;
       next();
-    } catch (err) {
+    } catch {
       next(new Error("UNAUTHORIZED"));
     }
   });
@@ -107,18 +90,14 @@ export function startRealtimeServer({
   io.on("connection", (socket: AppSocket) => {
     const { user } = socket.data;
 
-    // Chaque user rejoint automatiquement sa room perso : c'est là-dessus
-    // qu'on lui envoie ses notifications, ses updates de ressources qu'il suit, etc.
     socket.join(rooms.user(user.id));
 
-    // Présence
     if (!onlineUsers.has(user.id)) onlineUsers.set(user.id, new Set());
     onlineUsers.get(user.id)!.add(socket.id);
     if (onlineUsers.get(user.id)!.size === 1) {
       io.emit("presence:update", { userId: user.id, status: "online" });
     }
 
-    // --- Rooms génériques (live sync sur n'importe quelle ressource) ---
     socket.on("room:join", (room, ack) => {
       socket.join(room);
       ack?.(true);
@@ -128,7 +107,6 @@ export function startRealtimeServer({
       ack?.(true);
     });
 
-    // --- Conversations ---
     socket.on("conversation:join", (conversationId) => {
       socket.join(rooms.conversation(conversationId));
     });
@@ -150,7 +128,6 @@ export function startRealtimeServer({
       });
     });
 
-    // --- Logs en direct (admin only) ---
     socket.on("logs:subscribe", (ack) => {
       if (user.role !== "ADMIN") {
         ack?.(false);
@@ -173,12 +150,9 @@ export function startRealtimeServer({
     });
   });
 
-  httpServer.listen(port, () => {
-    console.log(`[realtime] socket.io en écoute sur le port ${port}`);
-  });
-
   ioInstance = io;
-  return io;
+
+  return { io, engine };
 }
 
 export function isUserOnline(userId: string) {
