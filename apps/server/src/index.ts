@@ -1,33 +1,22 @@
-import { Elysia } from "elysia";
+import { app } from "./app";
 import { envPlugin as env } from "../plugins/env";
-import { betterAuthPlugin } from "../plugins/better-auth";
-import { mailerPlugin } from "../plugins/mailer";
-import { corsPlugin } from "../plugins/cors";
-import { rateLimiter } from "../middleware/rate-limiter";
-import { rateLimitStatus } from "../modules/security/rate-limite-status";
-import { adminRoute } from "../modules/admin";
-import { subscriptionRoute } from "../modules/subscription";
-import { userAuthRoute } from "../modules/auth/user";
-import { lastSeenPlugin } from "../middleware/last-seen";
+import { socketHandlers } from "../realtime/lib/io";
 
-const app = new Elysia()
-  .get("/", () => "Hello World")
-  .use(env)
-  .use(corsPlugin)
-  .use(mailerPlugin)
-  // .use(rateLimiter)
-  // .use(rateLimitStatus)
-  .use(betterAuthPlugin)
-  .use(lastSeenPlugin)
+const { websocket, ...engineFetchHandlers } = socketHandlers;
 
-  // .use(wsPlugin)
-  // .use(route)
-  // .use(loggerPlugin)
-  .use(adminRoute)
-  .use(subscriptionRoute)
-  .use(userAuthRoute)
-  .listen(env.decorator.env.PORT);
+Bun.serve({
+  port: env.decorator.env.PORT,
+  idleTimeout: 30, // doit être > pingInterval de socket.io (défaut 25s)
+  fetch(req, server) {
+    const url = new URL(req.url);
+    if (url.pathname.startsWith("/socket.io")) {
+      return engineFetchHandlers.fetch(req, server);
+    }
+    return app.handle(req);
+  },
+  websocket,
+});
 
 console.log(
-  `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`,
+  `🦊 Elysia + socket.io en écoute sur le port ${env.decorator.env.PORT}`,
 );

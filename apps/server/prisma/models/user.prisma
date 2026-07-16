@@ -42,8 +42,10 @@ model User {
     notifications          Notification[]
     notificationPreference NotificationPreference?
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+    createdAt                DateTime                  @default(now())
+    updatedAt                DateTime                  @updatedAt
+    conversationParticipants ConversationParticipant[]
+    messages                 Message[]
 
     @@unique([email, phone])
     @@map("user")

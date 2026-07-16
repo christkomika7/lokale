@@ -21,21 +21,31 @@ import {
   XCircle,
 } from "lucide-react";
 import { Separator } from "../../ui/separator";
-import Heading from "../../typography/heading";
-import DetailField from "../../ui/detail-field";
 import { Button } from "../../ui/button";
-import PanelHeader from "#/components/sheet/panel-header";
-import { UserStatus, type User } from "@lokale/types/user";
+import {
+  UserStatus,
+  type User,
+  type Role,
+  type Plan,
+} from "@lokale/types/user";
 import { getCity } from "#/data/city";
 import { formatIp, formatPhone, parseUserAgent } from "@lokale/lib/helpers";
 import { formatDate } from "@lokale/lib/date";
 import { cn } from "#/lib/utils";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { DailogType } from "@lokale/types/dialog";
 import { ConfirmActionDialog } from "#/components/dialog/confirm-action";
 import { SecureConfirmDialog } from "#/components/dialog/confirm-secure";
 import { ChangeRoleDialog } from "#/components/dialog/change-role";
 import { ChangePlanDialog } from "#/components/dialog/change-plan";
+import { api } from "./lib/api";
+
+import Heading from "../../typography/heading";
+import DetailField from "../../ui/detail-field";
+import PanelHeader from "#/components/sheet/panel-header";
+import { usePanelDialogStore } from "#/store/panel.store";
+import { SuspendUser } from "#/components/dialog/suspend-user";
+import { BanUser } from "#/components/dialog/ban-user";
 
 interface UserDetailProps {
   user: User;
@@ -45,6 +55,31 @@ interface UserDetailProps {
 
 export default function UserDetail({ user, onClose, onEdit }: UserDetailProps) {
   const [dialog, setDialog] = useState<DailogType>(null);
+
+  const changePlan = api.changePlan(user.id);
+  const changeRole = api.changeRole(user.id);
+  const cancelPlan = api.cancelPlan(user.id);
+  const resetPassword = api.changePassword(user.id);
+  const suspend = api.suspend(user.id);
+  const ban = api.ban(user.id);
+  const unban = api.unban(user.id);
+  const reactivate = api.reactivate(user.id);
+  const deleteUser = api.deleteUser(user.id);
+  const setDialogOpen = usePanelDialogStore((s) => s.setDialogOpen);
+
+  useEffect(() => {
+    setDialogOpen(dialog !== null);
+    return () => setDialogOpen(false);
+  }, [dialog, setDialogOpen]);
+
+  function closeDialog() {
+    setDialog(null);
+  }
+
+  function handleDialog(state: boolean, type: DailogType) {
+    setDialog(state ? type : null);
+  }
+
   return (
     <>
       <div className="flex flex-col h-full overflow-y-auto">
@@ -78,7 +113,7 @@ export default function UserDetail({ user, onClose, onEdit }: UserDetailProps) {
               <DetailField
                 icon={MapPin}
                 label="Ville / Pays"
-                value={`République du Congo, ${getCity(user.city)?.label}.`}
+                value={`République du Congo${getCity(user.city)?.label ? `, ${getCity(user.city)?.label}` : ""}`}
               />
               <DetailField
                 icon={Calendar}
@@ -183,6 +218,7 @@ export default function UserDetail({ user, onClose, onEdit }: UserDetailProps) {
                 variant="error"
                 className="rounded-sm"
                 onClick={() => setDialog("cancelSubscription")}
+                disabled={user.plan === "FREE"}
               >
                 <XCircle className="size-4" />
                 Annuler l'abonnement
@@ -261,31 +297,38 @@ export default function UserDetail({ user, onClose, onEdit }: UserDetailProps) {
           </div>
         </div>
       </div>
+
       <ConfirmActionDialog
         open={dialog === "resetPassword"}
-        onOpenChange={(v) => setDialog(v ? "resetPassword" : null)}
-        onConfirm={() => {}}
+        onOpenChange={(v) => handleDialog(v, "resetPassword")}
+        onConfirm={() =>
+          resetPassword.mutate(undefined, { onSuccess: closeDialog })
+        }
+        loading={resetPassword.isPending}
         icon={Key}
         title="Réinitialiser le mot de passe"
         description={`Un email de réinitialisation sera envoyé à ${user.email}.`}
         confirmLabel="Envoyer le lien"
       />
 
-      <ConfirmActionDialog
+      <SuspendUser
         open={dialog === "suspend"}
-        onOpenChange={(v) => setDialog(v ? "suspend" : null)}
-        onConfirm={() => {}}
-        icon={UserX}
-        title="Suspendre l'utilisateur"
-        description="L'utilisateur ne pourra plus se connecter tant que son compte n'est pas réactivé."
-        confirmLabel="Suspendre"
-        variant="amber"
+        onOpenChange={(v) => handleDialog(v, "suspend")}
+        onConfirm={(payload) =>
+          suspend.mutate(payload, { onSuccess: closeDialog })
+        }
+        loading={suspend.isPending}
+        userRole={user.role}
+        hasActiveSubscription={user.hasActiveSubscription}
       />
 
       <ConfirmActionDialog
         open={dialog === "reactivate"}
-        onOpenChange={(v) => setDialog(v ? "reactivate" : null)}
-        onConfirm={() => {}}
+        onOpenChange={(v) => handleDialog(v, "reactivate")}
+        onConfirm={() =>
+          reactivate.mutate(undefined, { onSuccess: closeDialog })
+        }
+        loading={reactivate.isPending}
         icon={UserCheck}
         title="Réactiver l'utilisateur"
         description="L'utilisateur retrouvera immédiatement l'accès à son compte."
@@ -295,8 +338,9 @@ export default function UserDetail({ user, onClose, onEdit }: UserDetailProps) {
 
       <ConfirmActionDialog
         open={dialog === "liftBan"}
-        onOpenChange={(v) => setDialog(v ? "liftBan" : null)}
-        onConfirm={() => {}}
+        onOpenChange={(v) => handleDialog(v, "liftBan")}
+        onConfirm={() => unban.mutate(undefined, { onSuccess: closeDialog })}
+        loading={unban.isPending}
         icon={UserCheck}
         title="Lever le bannissement"
         description="L'utilisateur pourra à nouveau accéder à la plateforme."
@@ -306,8 +350,11 @@ export default function UserDetail({ user, onClose, onEdit }: UserDetailProps) {
 
       <ConfirmActionDialog
         open={dialog === "cancelSubscription"}
-        onOpenChange={(v) => setDialog(v ? "cancelSubscription" : null)}
-        onConfirm={() => {}}
+        onOpenChange={(v) => handleDialog(v, "cancelSubscription")}
+        onConfirm={() =>
+          cancelPlan.mutate(undefined, { onSuccess: closeDialog })
+        }
+        loading={cancelPlan.isPending}
         icon={XCircle}
         title="Annuler l'abonnement"
         description="L'abonnement actif sera annulé à la fin de la période en cours."
@@ -317,36 +364,51 @@ export default function UserDetail({ user, onClose, onEdit }: UserDetailProps) {
 
       <ChangeRoleDialog
         open={dialog === "changeRole"}
-        onOpenChange={(v) => setDialog(v ? "changeRole" : null)}
+        onOpenChange={(v) => handleDialog(v, "changeRole")}
         currentRole={user.role}
-        onConfirm={() => {}}
+        loading={changeRole.isPending}
+        onConfirm={(role: Role) =>
+          changeRole.mutate({ role } as any, { onSuccess: closeDialog })
+        }
       />
 
       <ChangePlanDialog
         open={dialog === "changePlan"}
-        onOpenChange={(v) => setDialog(v ? "changePlan" : null)}
+        onOpenChange={(v) => handleDialog(v, "changePlan")}
         plan={user.plan}
         role={user.role}
-        onConfirm={() => {}}
+        loading={changePlan.isPending}
+        onConfirm={(plan: Plan) =>
+          changePlan.mutate({ plan } as any, {
+            onSuccess: () => {
+              closeDialog();
+              onClose();
+            },
+          })
+        }
       />
 
       {/* Actions destructives : confirmation sécurisée */}
 
-      <SecureConfirmDialog
+      <BanUser
         open={dialog === "ban"}
-        onOpenChange={(v) => setDialog(v ? "ban" : null)}
-        onConfirm={() => {}}
-        icon={Ban}
-        title="Bannir l'utilisateur"
-        description={`Cette action bloquera définitivement <b class="text-amber-500">${user.name}</b> l'accès du compte à la plateforme. Cette action peut être annulée plus tard.`}
-        confirmLabel="Bannir définitivement"
-        confirmationValue={user.email}
+        onOpenChange={(v) => handleDialog(v, "ban")}
+        loading={ban.isPending}
+        onConfirm={(payload) => ban.mutate(payload, { onSuccess: closeDialog })}
       />
 
       <SecureConfirmDialog
         open={dialog === "delete"}
-        onOpenChange={(v) => setDialog(v ? "delete" : null)}
-        onConfirm={() => {}}
+        onOpenChange={(v) => handleDialog(v, "delete")}
+        onConfirm={() =>
+          deleteUser.mutate(undefined, {
+            onSuccess: () => {
+              closeDialog();
+              onClose();
+            },
+          })
+        }
+        loading={deleteUser.isPending}
         icon={Trash2}
         title="Supprimer le compte"
         description="Cette action est irréversible. Toutes les données de l'utilisateur (publications, paiements, sessions) seront définitivement supprimées."

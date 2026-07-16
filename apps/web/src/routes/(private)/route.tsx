@@ -7,9 +7,9 @@ export const Route = createFileRoute("/(private)")({
 
 function RouteComponent() {
   return (
-    <>
+    <div className="h-fit">
       <Navbar />
       <Outlet />
-    </>
+    </div>
   );
 }

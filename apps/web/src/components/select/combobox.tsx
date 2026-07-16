@@ -18,6 +18,7 @@ interface BaseComboboxProps {
   className?: string;
   searchPlaceholder?: string;
   emptyLabel?: string;
+  required?: boolean;
 }
 
 interface SingleComboboxProps extends BaseComboboxProps {
@@ -34,21 +35,23 @@ interface MultiComboboxProps extends BaseComboboxProps {
 
 type ComboboxProps = SingleComboboxProps | MultiComboboxProps;
 
-function Tag({ label, onRemove }: { label: string; onRemove: () => void }) {
+function Tag({ label, onRemove }: { label: string; onRemove?: () => void }) {
   return (
     <span className="inline-flex items-center gap-1 rounded-[4px] bg-amber-50 dark:bg-amber-500/10 px-2.5 py-1.5 text-[12px] font-medium text-amber-700 dark:text-amber-500 leading-none">
       {label}
-      <button
-        type="button"
-        tabIndex={-1}
-        onClick={(e) => {
-          e.stopPropagation();
-          onRemove();
-        }}
-        className="ml-0.5 rounded-sm text-amber-600 hover:text-amber-700 dark:hover:text-amber-200 transition-colors"
-      >
-        <X className="size-2.5" />
-      </button>
+      {onRemove && (
+        <button
+          type="button"
+          tabIndex={-1}
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove();
+          }}
+          className="ml-0.5 rounded-sm text-amber-600 hover:text-amber-700 dark:hover:text-amber-200 transition-colors"
+        >
+          <X className="size-2.5" />
+        </button>
+      )}
     </span>
   );
 }
@@ -64,6 +67,7 @@ export function Combobox(props: ComboboxProps) {
     className,
     searchPlaceholder = "Rechercher…",
     emptyLabel = "Aucun résultat.",
+    required = true,
   } = props;
 
   const isMulti = props.mode === "multi";
@@ -106,25 +110,35 @@ export function Combobox(props: ComboboxProps) {
   function toggle(value: string) {
     if (isMulti) {
       const current = props.value as string[];
-      props.onChange(
-        current.includes(value)
-          ? current.filter((v) => v !== value)
-          : [...current, value],
-      );
+      if (current.includes(value)) {
+        // Empêche de retirer le dernier élément si le champ est requis
+        if (required && current.length <= 1) return;
+        props.onChange(current.filter((v) => v !== value));
+      } else {
+        props.onChange([...current, value]);
+      }
     } else {
       const current = props.value as string | null;
-      props.onChange(current === value ? null : value);
+      // Si required, recliquer sur l'item déjà sélectionné ne le désélectionne pas
+      if (current === value) {
+        if (!required) props.onChange(null);
+      } else {
+        props.onChange(value);
+      }
       setOpen(false);
     }
   }
 
   function removeTag(value: string) {
     if (!isMulti) return;
-    props.onChange((props.value as string[]).filter((v) => v !== value));
+    const current = props.value as string[];
+    if (required && current.length <= 1) return;
+    props.onChange(current.filter((v) => v !== value));
   }
 
   function clearAll(e: React.MouseEvent) {
     e.stopPropagation();
+    if (required) return;
     if (isMulti) props.onChange([]);
     else props.onChange(null);
   }
@@ -139,7 +153,7 @@ export function Combobox(props: ComboboxProps) {
     .map((v) => items.find((i) => i.value === v))
     .filter(Boolean) as ComboboxItem[];
 
-  const hasClear = selectedValues.length > 0;
+  const canClear = !required && selectedValues.length > 0;
   const singleLabel = !isMulti && selectedItems[0]?.label;
 
   return (
@@ -151,12 +165,13 @@ export function Combobox(props: ComboboxProps) {
         aria-expanded={open}
         aria-haspopup="listbox"
         aria-invalid={hasError}
+        aria-required={required}
         className={cn(
           "min-h-10 h-auto w-full min-w-0 rounded-md border border-input dark:border-transparent",
           "bg-transparent px-2.5 py-1 text-xs transition-colors outline-none",
           "flex items-center gap-1.5 cursor-pointer select-none text-left",
-          !hasClear && "text-muted-foreground",
-          hasClear && "text-foreground",
+          selectedValues.length === 0 && "text-muted-foreground",
+          selectedValues.length > 0 && "text-foreground",
           open &&
             "border-amber-400 ring-3 ring-amber-400/10 dark:border-amber-400",
           hasError &&
@@ -181,7 +196,11 @@ export function Combobox(props: ComboboxProps) {
                 <Tag
                   key={item.id}
                   label={item.label}
-                  onRemove={() => removeTag(item.value)}
+                  onRemove={
+                    required && selectedItems.length <= 1
+                      ? undefined
+                      : () => removeTag(item.value)
+                  }
                 />
               ))
             ) : (
@@ -202,7 +221,7 @@ export function Combobox(props: ComboboxProps) {
         </span>
 
         <span className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
-          {hasClear && (
+          {canClear && (
             <span
               role="button"
               tabIndex={-1}
@@ -254,15 +273,25 @@ export function Combobox(props: ComboboxProps) {
             ) : (
               filtered.map((item) => {
                 const selected = isSelected(item.value);
+                const isLastRequiredMultiItem =
+                  isMulti && required && selected && selectedValues.length <= 1;
+
                 return (
                   <li
                     key={item.id}
                     role="option"
                     aria-selected={selected}
-                    onClick={() => toggle(item.value)}
+                    aria-disabled={isLastRequiredMultiItem}
+                    onClick={() => {
+                      if (isLastRequiredMultiItem) return;
+                      toggle(item.value);
+                    }}
                     className={cn(
-                      "flex items-center justify-between gap-2 px-2.5 py-1.5 text-xs cursor-pointer",
+                      "flex items-center justify-between gap-2 px-2.5 py-1.5 text-xs",
                       "transition-colors duration-100",
+                      isLastRequiredMultiItem
+                        ? "cursor-not-allowed opacity-50"
+                        : "cursor-pointer",
                       selected
                         ? "bg-amber-400/10 text-amber-700 dark:text-amber-300"
                         : "text-foreground dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800",
@@ -284,13 +313,15 @@ export function Combobox(props: ComboboxProps) {
                 {selectedValues.length} sélectionné
                 {selectedValues.length > 1 ? "s" : ""}
               </span>
-              <button
-                type="button"
-                onClick={clearAll}
-                className="text-[11px] text-amber-600 dark:text-amber-400 hover:underline"
-              >
-                Tout effacer
-              </button>
+              {!required && (
+                <button
+                  type="button"
+                  onClick={clearAll}
+                  className="text-[11px] text-amber-600 dark:text-amber-400 hover:underline"
+                >
+                  Tout effacer
+                </button>
+              )}
             </div>
           )}
         </div>

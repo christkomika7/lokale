@@ -35,6 +35,7 @@ interface InputProps {
   clearButton?: boolean;
   phonePrefix?: string;
   formatPhoneNumber?: boolean;
+  required?: boolean;
 }
 
 export default function Input({
@@ -54,6 +55,7 @@ export default function Input({
   onBlur,
   phonePrefix = "+242",
   formatPhoneNumber = true,
+  required = true,
 }: InputProps) {
   const [show, setShow] = useState(false);
 
@@ -178,6 +180,7 @@ export default function Input({
           autoComplete={autoComplete}
           onChange={isPhone ? handlePhoneChange : onChange}
           inputMode={isPhone ? "numeric" : undefined}
+          required={required}
         />
 
         {!isPassword && !isPhone && clearButton && value && (

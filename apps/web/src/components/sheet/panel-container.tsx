@@ -1,6 +1,6 @@
-import Panel from "#/components/sheet/panel";
+import type { PanelMode } from "@lokale/types/panel";
 
-export type PanelMode = "detail" | "edit" | "create";
+import Panel from "#/components/sheet/panel";
 
 interface PanelContainerProps<T> {
   open: boolean;

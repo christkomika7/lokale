@@ -23,17 +23,15 @@ export const statusCfg: Record<
   },
   PENDING: {
     label: "En attente",
-    dot: "bg-slate-400",
-    badge:
-      "bg-slate-100 text-slate-600 dark:bg-neutral-700/50 dark:text-neutral-400",
+    dot: "bg-zinc-400",
+    badge: "bg-zinc-100 text-zinc-600 dark:bg-zinc-700/50 dark:text-zinc-400",
   },
 };
 
 export const roleCfg: Record<Role, { label: string; badge: string }> = {
   USER: {
     label: "Utilisateur",
-    badge:
-      "bg-slate-100 text-slate-600 dark:bg-neutral-700/50 dark:text-neutral-400",
+    badge: "bg-zinc-100 text-zinc-600 dark:bg-zinc-700/50 dark:text-zinc-400",
   },
   WORKSPACE: {
     label: "Entreprise",
@@ -49,8 +47,12 @@ export const roleCfg: Record<Role, { label: string; badge: string }> = {
 export const planCfg: Record<Plan, { label: string; badge: string }> = {
   FREE: {
     label: "Free",
+    badge: "bg-zinc-100 text-zinc-500 dark:bg-zinc-700/50 dark:text-zinc-400",
+  },
+  STARTER: {
+    label: "Starter",
     badge:
-      "bg-slate-100 text-slate-500 dark:bg-neutral-700/50 dark:text-neutral-400",
+      "bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400",
   },
   PRO: {
     label: "Pro",

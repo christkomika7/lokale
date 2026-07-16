@@ -59,6 +59,7 @@ export default function DialogHeader({
         <div className="space-y-1">
           <AlertDialogTitle className="text-left">{title}</AlertDialogTitle>
           <AlertDialogDescription
+            className="text-left"
             dangerouslySetInnerHTML={{ __html: description }}
           />
         </div>

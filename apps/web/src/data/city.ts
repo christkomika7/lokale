@@ -42,5 +42,6 @@ export const congoCities = [
 ];
 
 export function getCity(value: string) {
+  if (!value) return { label: "" };
   return congoCities.find((city) => city.value === value);
 }

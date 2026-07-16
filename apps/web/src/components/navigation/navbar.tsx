@@ -24,7 +24,7 @@ const CATEGORIES = [
 export default function Navbar() {
   const [selectedCat, setSelectedCat] = useState(CATEGORIES[0]);
   return (
-    <nav className="border-b border-neutral-100 dark:border-neutral-700/60 bg-white dark:bg-neutral-900/70 backdrop-blur-xl relative z-10">
+    <nav className="border-b border-neutral-100 dark:border-neutral-700/60 bg-white dark:bg-neutral-900/70 backdrop-blur-xl h-fit relative z-10">
       <Container className="max-w-6xl">
         <div className="py-2 grid grid-cols-[1fr_3fr_1.5fr] items-center gap-2">
           <Logo />

@@ -8,9 +8,13 @@ import { roles } from "@lokale/config/auth/permissions";
 import { Combobox } from "../select/combobox";
 
 import DialogHeader from "./components/dialog-header";
+import AlertMessage from "../alert/alert-message";
+import { Badge } from "../ui/badge";
+import Loader from "../ui/loader";
 
 interface ChangeRoleDialogProps {
   open: boolean;
+  loading: boolean;
   onOpenChange: (open: boolean) => void;
   currentRole: Role;
   onConfirm: (role: Role) => Promise<void> | void;
@@ -18,22 +22,18 @@ interface ChangeRoleDialogProps {
 
 export function ChangeRoleDialog({
   open,
+  loading,
   onOpenChange,
   currentRole,
   onConfirm,
 }: ChangeRoleDialogProps) {
   const [role, setRole] = useState<Role>(currentRole);
-  const [loading, setLoading] = useState(false);
 
   const handleConfirm = async () => {
     if (role === currentRole) return;
-    setLoading(true);
     try {
-      await onConfirm(role);
-      onOpenChange(false);
-    } finally {
-      setLoading(false);
-    }
+      onConfirm(role);
+    } catch {}
   };
 
   return (
@@ -58,6 +58,29 @@ export function ChangeRoleDialog({
             placeholder="Sélectionner un rôle"
             emptyLabel="Aucun rôle trouvé."
           />
+          {currentRole === Role.WORKSPACE && role !== Role.WORKSPACE && (
+            <AlertMessage
+              type="warning"
+              title="Abonnement annulé automatiquement"
+              description="Cet utilisateur possède un abonnement actif lié à son statut d'entreprise."
+              subtext="En changeant son rôle, son abonnement en cours sera annulé immédiatement et ne sera pas remboursé automatiquement."
+            />
+          )}
+
+          {currentRole !== Role.WORKSPACE && role === Role.WORKSPACE && (
+            <AlertMessage
+              type="warning"
+              title="Aucun abonnement associé"
+              description="Le passage au rôle Entreprise ne crée pas d'abonnement automatiquement."
+              subtext={
+                <>
+                  L'utilisateur restera sur le plan{" "}
+                  <Badge variant="info">FREE</Badge> jusqu'à ce qu'un abonnement
+                  lui soit attribué manuellement.
+                </>
+              }
+            />
+          )}
         </div>
 
         <DialogFooter className="mt-2">
@@ -75,7 +98,7 @@ export function ChangeRoleDialog({
             onClick={handleConfirm}
             disabled={loading || role === currentRole}
           >
-            {loading && <Loader2 className="size-4 animate-spin" />}
+            {loading && <Loader />}
             Confirmer
           </Button>
         </DialogFooter>

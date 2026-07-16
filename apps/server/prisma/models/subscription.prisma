@@ -11,6 +11,8 @@ model Subscription {
     endDate   DateTime
     autoRenew Boolean            @default(true)
 
+    pausedAt DateTime?
+
     user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
     business Business? @relation(fields: [businessId], references: [id], onDelete: Cascade)
 

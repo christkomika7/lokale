@@ -21,6 +21,7 @@ enum SubscriptionStatus {
     EXPIRED
     CANCELLED
     PENDING_PAYMENT
+    PAUSED
 }
 
 enum ContentType {
@@ -82,9 +83,9 @@ enum UserCreationSource {
 
 enum LogStatus {
     SUCCESS
-    ERROR
-    WARNING
+    FAILURE
     PENDING
+    CANCELLED
 }
 
 enum LogLevel {
@@ -105,6 +106,8 @@ enum NotificationType {
     SUBSCRIPTION
     PROMOTION
     SYSTEM
+    MESSAGE
+    REVIEW
 }
 
 enum NotificationChannel {

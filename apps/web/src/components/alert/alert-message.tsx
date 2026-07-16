@@ -12,7 +12,7 @@ import { Button } from "../ui/button";
 interface AlertMessageProps {
   title: string;
   description?: string;
-  subtext?: string;
+  subtext?: React.ReactNode | string;
   className?: string;
   type: "default" | "destructive" | "warning" | "error" | "info" | "success";
   command?: {

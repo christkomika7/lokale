@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ShieldCheck, ShieldX, ArrowLeft, RefreshCw, Lock } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { useForm } from "@tanstack/react-form";
 import { authClient } from "#/lib/auth-client";
@@ -19,7 +19,13 @@ import z from "zod";
 import Input from "#/components/input/input";
 import Loader from "#/components/ui/loader";
 
-type ResetState = "valid" | "invalid" | "success";
+type ResetState =
+  | "loading"
+  | "valid"
+  | "expired"
+  | "already-used"
+  | "invalid"
+  | "success";
 
 export const Route = createFileRoute("/(auth)/reset-password")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -29,21 +35,134 @@ export const Route = createFileRoute("/(auth)/reset-password")({
   component: RouteComponent,
 });
 
+/**
+ * Formulaire de renvoi de lien réutilisé par les états "invalid" et "expired".
+ * Volontairement absent de l'état "already-used" : un lien déjà consommé
+ * ne doit pas devenir un point d'entrée pour renvoyer des emails à volonté.
+ */
+function ResendResetForm({
+  manualEmail,
+  setManualEmail,
+  emailError,
+  setEmailError,
+  isResending,
+  canResend,
+  formatted,
+  resent,
+  onSubmit,
+}: {
+  manualEmail: string;
+  setManualEmail: (v: string) => void;
+  emailError: string | null;
+  setEmailError: (v: string | null) => void;
+  isResending: boolean;
+  canResend: boolean;
+  formatted: string;
+  resent: boolean;
+  onSubmit: (e: FormEvent) => void;
+}) {
+  return (
+    <>
+      {resent && (
+        <div className="w-full flex items-center gap-2 p-3 rounded-md bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20">
+          <RefreshCw className="size-3.5 text-emerald-500 shrink-0" />
+          <p className="text-[12px] font-medium text-emerald-600 dark:text-emerald-400 text-left">
+            Si un compte existe avec cette adresse, un email vient d'être
+            envoyé.
+          </p>
+        </div>
+      )}
+
+      <form onSubmit={onSubmit} className="w-full space-y-2.5" noValidate>
+        <div className="text-left space-y-1">
+          <label
+            htmlFor="resend-email"
+            className="block text-[12px] font-medium text-neutral-600 dark:text-neutral-300"
+          >
+            Adresse email
+          </label>
+          <input
+            id="resend-email"
+            type="email"
+            autoComplete="email"
+            value={manualEmail}
+            onChange={(ev) => {
+              setManualEmail(ev.target.value);
+              if (emailError) setEmailError(null);
+            }}
+            placeholder="vous@exemple.com"
+            disabled={isResending}
+            className="w-full h-10 px-3 rounded-md border border-input dark:border-neutral-700 bg-white dark:bg-neutral-900 text-[13px] text-neutral-800 dark:text-neutral-100 outline-none focus:ring-2 focus:ring-amber-400/60 disabled:opacity-60"
+          />
+          {emailError && (
+            <p className="text-[11px] text-red-500">{emailError}</p>
+          )}
+        </div>
+
+        {canResend ? (
+          <Button
+            type="submit"
+            variant="amber"
+            className="w-full rounded-md"
+            disabled={isResending}
+          >
+            {isResending ? (
+              <span className="flex items-center gap-2">
+                <Loader className="size-4 animate-spin" />
+                Envoi en cours…
+              </span>
+            ) : (
+              <>
+                <RefreshCw className="size-4" />
+                Renvoyer le lien
+              </>
+            )}
+          </Button>
+        ) : (
+          <div className="w-full flex items-center justify-center gap-2 h-10 rounded-md border border-input dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/60">
+            <RefreshCw className="size-3.5 text-neutral-400" />
+            <p className="text-[13px] text-neutral-500 dark:text-neutral-400">
+              Renvoyer dans{" "}
+              <span className="font-semibold text-neutral-700 dark:text-neutral-200 tabular-nums">
+                {formatted}
+              </span>
+            </p>
+          </div>
+        )}
+
+        <Link to="/sign-in">
+          <Button
+            variant="amber"
+            className="w-full bg-amber-500! rounded-md flex"
+          >
+            <ArrowLeft className="size-3.5" />
+            Retour à la connexion
+          </Button>
+        </Link>
+      </form>
+    </>
+  );
+}
+
 function RouteComponent() {
   const { token, error: tokenError } = Route.useSearch();
   const navigate = useNavigate();
 
-  // Better Auth a déjà validé le token avant la redirection vers cette page :
-  // - présence de `token` => lien valide
-  // - présence de `error` (ou absence de token) => lien invalide/expiré
   const [state, setState] = useState<ResetState>(
-    token && !tokenError ? "valid" : "invalid",
+    token && !tokenError ? "loading" : "invalid",
   );
 
   const [manualEmail, setManualEmail] = useState("");
   const [emailError, setEmailError] = useState<string | null>(null);
   const [isResending, setIsResending] = useState(false);
   const [resent, setResent] = useState(false);
+
+  const checkResetTokenStatus = useApiMutation<
+    { status: "pending" | "expired" | "already-used" | "invalid" },
+    { token: string }
+  >(() => `/user/reset-password-token-status?token=${token}`, {
+    method: "get",
+  });
 
   const resendReset = useApiMutation<{ message: string }, { email: string }>(
     () => `/user/resend-reset-password`,
@@ -54,6 +173,35 @@ function RouteComponent() {
     key: `reset-password-resend:${manualEmail.trim().toLowerCase() || "anonymous"}`,
     initial: VERIFY_EMAIL_RESEND_COOLDOWN,
   });
+
+  useEffect(() => {
+    if (!token || tokenError) {
+      setState("invalid");
+      return;
+    }
+
+    checkResetTokenStatus.mutate(
+      { token },
+      {
+        onSuccess: (data) => {
+          switch (data.status) {
+            case "pending":
+              setState("valid");
+              break;
+            case "expired":
+              setState("expired");
+              break;
+            case "already-used":
+              setState("already-used");
+              break;
+            default:
+              setState("invalid");
+          }
+        },
+        onError: () => setState("invalid"),
+      },
+    );
+  }, [token, tokenError]);
 
   const form = useForm({
     defaultValues: {
@@ -67,7 +215,6 @@ function RouteComponent() {
       });
 
       if (error) {
-        // Le token a pu expirer entre le chargement de la page et la soumission
         toast.error(
           getAuthErrorMessage(error) ??
             "Impossible de réinitialiser le mot de passe.",
@@ -125,17 +272,23 @@ function RouteComponent() {
     );
   }
 
+  const cardProps =
+    state === "valid"
+      ? {
+          title: "Nouveau mot de passe",
+          description:
+            "Choisissez un mot de passe fort pour sécuriser votre compte.",
+        }
+      : { title: "", description: "" };
+
   return (
     <AuthLayout
       title="Découvrez chaque lieu qui compte autour de vous."
       subtitle="Lokale recense restaurants, hôtels, pharmacies et commerces du Congo pour que vous trouviez toujours ce dont vous avez besoin."
     >
-      <AuthCard title="" description="">
+      <AuthCard title={cardProps.title} description={cardProps.description}>
         {state === "valid" && (
-          <AuthCard
-            title="Nouveau mot de passe"
-            description="Choisissez un mot de passe fort pour sécuriser votre compte."
-          >
+          <>
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -289,7 +442,7 @@ function RouteComponent() {
               <ArrowLeft className="size-3.5" />
               Retour à la connexion
             </Link>
-          </AuthCard>
+          </>
         )}
 
         {state === "success" && (
@@ -324,6 +477,60 @@ function RouteComponent() {
           </div>
         )}
 
+        {state === "expired" && (
+          <div className="flex flex-col items-center text-center py-6 space-y-6">
+            <div className="size-20 rounded-full bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center">
+              <ShieldX className="size-10 text-amber-500" strokeWidth={1.5} />
+            </div>
+            <div className="space-y-2">
+              <h1 className="text-[22px] font-bold text-neutral-800 dark:text-neutral-100 tracking-tight">
+                Ce lien a expiré
+              </h1>
+              <p className="text-[13px] text-neutral-500 dark:text-neutral-400 leading-relaxed max-w-xs mx-auto">
+                Le lien de réinitialisation a expiré pour votre sécurité.
+                Saisissez votre adresse email pour en recevoir un nouveau.
+              </p>
+            </div>
+
+            <ResendResetForm
+              manualEmail={manualEmail}
+              setManualEmail={setManualEmail}
+              emailError={emailError}
+              setEmailError={setEmailError}
+              isResending={isResending}
+              canResend={canResend}
+              formatted={formatted}
+              resent={resent}
+              onSubmit={handleResend}
+            />
+          </div>
+        )}
+
+        {state === "already-used" && (
+          <div className="flex flex-col items-center text-center py-6 space-y-6">
+            <div className="size-20 rounded-full bg-red-50 dark:bg-red-500/10 flex items-center justify-center">
+              <ShieldX className="size-10 text-red-500" strokeWidth={1.5} />
+            </div>
+            <div className="space-y-2">
+              <h1 className="text-[22px] font-bold text-neutral-800 dark:text-neutral-100 tracking-tight">
+                Ce lien a déjà été utilisé
+              </h1>
+              <p className="text-[13px] text-neutral-500 dark:text-neutral-400 leading-relaxed max-w-xs mx-auto">
+                Ce lien de réinitialisation a déjà servi. Si vous n'êtes pas à
+                l'origine de cette action, connectez-vous et changez votre mot
+                de passe, ou contactez le support.
+              </p>
+            </div>
+
+            <Link to="/sign-in" className="w-full">
+              <Button variant="amber" className="w-full rounded-md flex">
+                <ArrowLeft className="size-3.5" />
+                Retour à la connexion
+              </Button>
+            </Link>
+          </div>
+        )}
+
         {state === "invalid" && (
           <div className="flex flex-col items-center text-center py-6 space-y-6">
             <div className="size-20 rounded-full bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center">
@@ -332,96 +539,25 @@ function RouteComponent() {
 
             <div className="space-y-2">
               <h1 className="text-[22px] font-bold text-neutral-800 dark:text-neutral-100 tracking-tight">
-                Lien invalide ou expiré
+                Lien invalide
               </h1>
               <p className="text-[13px] text-neutral-500 dark:text-neutral-400 leading-relaxed max-w-xs mx-auto">
-                Ce lien de réinitialisation est invalide, a expiré ou a déjà été
-                utilisé. Saisissez votre adresse email pour en recevoir un
-                nouveau.
+                Ce lien de réinitialisation est invalide. Saisissez votre
+                adresse email pour en recevoir un nouveau.
               </p>
             </div>
 
-            {resent && (
-              <div className="w-full flex items-center gap-2 p-3 rounded-md bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20">
-                <RefreshCw className="size-3.5 text-emerald-500 shrink-0" />
-                <p className="text-[12px] font-medium text-emerald-600 dark:text-emerald-400 text-left">
-                  Si un compte existe avec cette adresse, un email vient d'être
-                  envoyé.
-                </p>
-              </div>
-            )}
-
-            <form
+            <ResendResetForm
+              manualEmail={manualEmail}
+              setManualEmail={setManualEmail}
+              emailError={emailError}
+              setEmailError={setEmailError}
+              isResending={isResending}
+              canResend={canResend}
+              formatted={formatted}
+              resent={resent}
               onSubmit={handleResend}
-              className="w-full space-y-2.5"
-              noValidate
-            >
-              <div className="text-left space-y-1">
-                <label
-                  htmlFor="resend-email"
-                  className="block text-[12px] font-medium text-neutral-600 dark:text-neutral-300"
-                >
-                  Adresse email
-                </label>
-                <input
-                  id="resend-email"
-                  type="email"
-                  autoComplete="email"
-                  value={manualEmail}
-                  onChange={(ev) => {
-                    setManualEmail(ev.target.value);
-                    if (emailError) setEmailError(null);
-                  }}
-                  placeholder="vous@exemple.com"
-                  disabled={isResending}
-                  className="w-full h-10 px-3 rounded-md border border-input dark:border-neutral-700 bg-white dark:bg-neutral-900 text-[13px] text-neutral-800 dark:text-neutral-100 outline-none focus:ring-2 focus:ring-amber-400/60 disabled:opacity-60"
-                />
-                {emailError && (
-                  <p className="text-[11px] text-red-500">{emailError}</p>
-                )}
-              </div>
-
-              {canResend ? (
-                <Button
-                  type="submit"
-                  variant="amber"
-                  className="w-full rounded-md"
-                  disabled={isResending}
-                >
-                  {isResending ? (
-                    <span className="flex items-center gap-2">
-                      <Loader className="size-4 animate-spin" />
-                      Envoi en cours…
-                    </span>
-                  ) : (
-                    <>
-                      <RefreshCw className="size-4" />
-                      Renvoyer le lien
-                    </>
-                  )}
-                </Button>
-              ) : (
-                <div className="w-full flex items-center justify-center gap-2 h-10 rounded-md border border-input dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/60">
-                  <RefreshCw className="size-3.5 text-neutral-400" />
-                  <p className="text-[13px] text-neutral-500 dark:text-neutral-400">
-                    Renvoyer dans{" "}
-                    <span className="font-semibold text-neutral-700 dark:text-neutral-200 tabular-nums">
-                      {formatted}
-                    </span>
-                  </p>
-                </div>
-              )}
-
-              <Link to="/sign-in">
-                <Button
-                  variant="amber"
-                  className="w-full bg-amber-500! rounded-md flex"
-                >
-                  <ArrowLeft className="size-3.5" />
-                  Retour à la connexion
-                </Button>
-              </Link>
-            </form>
+            />
           </div>
         )}
       </AuthCard>

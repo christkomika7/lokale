@@ -24,7 +24,7 @@ export default function DetailField({
       className={`flex items-start gap-3 py-2.5 ${isRow ? "justify-between" : ""} ${className}`}
     >
       {Icon && (
-        <span className="size-7 rounded-lg bg-slate-50 dark:bg-neutral-800 flex items-center justify-center shrink-0 mt-0.5">
+        <span className="size-7 rounded-sm bg-neutral-100/60 dark:bg-neutral-800 flex items-center justify-center shrink-0 mt-0.5">
           <Icon className="size-3.5 text-neutral-400 dark:text-neutral-500" />
         </span>
       )}

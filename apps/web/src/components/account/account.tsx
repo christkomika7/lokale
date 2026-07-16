@@ -34,14 +34,14 @@ export default function Account() {
           label: "Deconnexion",
           value: "disconnect",
           async action() {
-            await authClient.signOut({
-              fetchOptions: {
-                onSuccess: () => {
-                  queryClient.invalidateQueries({ queryKey: ["session"] });
-                  router.invalidate();
-                  router.navigate({ to: "/sign-in" });
-                },
-              },
+            await authClient.signOut();
+            await queryClient.invalidateQueries({
+              queryKey: ["session"],
+            });
+            await router.invalidate({ sync: true });
+            router.navigate({
+              to: "/sign-in",
+              replace: true,
             });
           },
         },

@@ -1,1 +1,2 @@
-export const TOKEN_EXPIRES_IN = 60;
+export const TOKEN_EXPIRES_IN = 2;
+export const RESET_PASSWORD_TOKEN_EXPIRES_IN = 2;

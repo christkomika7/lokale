@@ -1,5 +1,11 @@
 import type z from "zod";
-import { emailSchema, userSchema } from "../lib/validator/user";
+import {
+  emailSchema,
+  planSchema,
+  roleSchema,
+  userEditSchema,
+  userSchema,
+} from "../lib/validator/user";
 
 export enum Role {
   ADMIN = "ADMIN",
@@ -38,6 +44,7 @@ export interface User {
   lastSeen: string;
   actions: number;
   emailVerified: boolean;
+  hasActiveSubscription: boolean;
   idVerified: boolean;
   ips: string[];
   devices: string[];
@@ -49,4 +56,7 @@ export interface EmailStatus {
 }
 
 export type UserSchemaType = z.infer<typeof userSchema>;
+export type UserEditSchemaType = z.infer<typeof userEditSchema>;
 export type EmailSchemaType = z.infer<typeof emailSchema>;
+export type RoleSchemaType = z.infer<typeof roleSchema>;
+export type PlanSchemaType = z.infer<typeof planSchema>;

@@ -9,9 +9,11 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Loader2, type LucideIcon } from "lucide-react";
 import DialogHeader from "./components/dialog-header";
+import Loader from "../ui/loader";
 
 interface SecureConfirmDialogProps {
   open: boolean;
+  loading: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => Promise<void> | void;
   icon: LucideIcon;
@@ -24,6 +26,7 @@ interface SecureConfirmDialogProps {
 
 export function SecureConfirmDialog({
   open,
+  loading,
   onOpenChange,
   onConfirm,
   icon: Icon,
@@ -34,25 +37,20 @@ export function SecureConfirmDialog({
   confirmationLabel = "Confirmez la valeur",
 }: SecureConfirmDialogProps) {
   const [inputValue, setInputValue] = useState("");
-  const [loading, setLoading] = useState(false);
 
   const isMatch = inputValue.trim() === confirmationValue;
 
   const reset = () => {
     setInputValue("");
-    setLoading(false);
   };
 
   const handleConfirm = async () => {
     if (!isMatch) return;
-    setLoading(true);
     try {
-      await onConfirm();
+      onConfirm();
       onOpenChange(false);
       reset();
-    } finally {
-      setLoading(false);
-    }
+    } catch {}
   };
 
   return (
@@ -112,7 +110,7 @@ export function SecureConfirmDialog({
             onClick={handleConfirm}
             disabled={!isMatch || loading}
           >
-            {loading && <Loader2 className="size-4 animate-spin" />}
+            {loading && <Loader />}
             {confirmLabel}
           </Button>
         </AlertDialogFooter>

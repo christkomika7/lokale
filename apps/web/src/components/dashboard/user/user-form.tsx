@@ -1,6 +1,12 @@
 import Heading from "#/components/typography/heading";
 import { Separator } from "#/components/ui/separator";
-import { Plan, Role, type User, type UserSchemaType } from "@lokale/types/user";
+import {
+  Plan,
+  Role,
+  type User,
+  type UserEditSchemaType,
+  type UserSchemaType,
+} from "@lokale/types/user";
 import { useForm } from "@tanstack/react-form";
 import {
   BadgeDollarSign,
@@ -15,7 +21,7 @@ import {
   UserPlus,
   X,
 } from "lucide-react";
-import { userSchema } from "@lokale/lib/validator/user";
+import { userEditSchema, userSchema } from "@lokale/lib/validator/user";
 import { Label } from "#/components/ui/label";
 import Input from "#/components/input/input";
 import {
@@ -29,11 +35,14 @@ import { Switch } from "#/components/ui/switch";
 import { cn } from "#/lib/utils";
 import ErrorMessage from "#/components/message/error-message";
 import { useState } from "react";
-import { useApiMutation } from "#/hook/use-api-mutation";
 import { getAuthErrorMessage } from "@lokale/lib/auth-error";
 import { toast } from "sonner";
 import { queryClient } from "#/lib/query-client";
 import { getPlans, roles } from "@lokale/config/auth/permissions";
+import { api } from "./lib/api";
+import AlertMessage from "#/components/alert/alert-message";
+import Required from "#/components/input/required";
+import z from "zod";
 
 interface UserFormProps {
   mode: "create" | "edit";
@@ -56,18 +65,8 @@ export const DEFAULT_FORM: UserSchemaType = {
 export default function UserForm({ mode, user, onClose }: UserFormProps) {
   const [globalError, setGlobalError] = useState<string | null>(null);
 
-  const updateUser = useApiMutation<User, UserSchemaType>(
-    () => `/admin/users/${user?.id}`,
-    {
-      method: "patch",
-      invalidate: ["admin-user"],
-      successMessage: "Utilisateur mis à jour",
-    },
-  );
-
-  const createUser = useApiMutation<User, UserSchemaType>("/admin/users", {
-    method: "post",
-  });
+  const create = api.createUser();
+  const update = api.updateUser(user?.id ?? "");
 
   const form = useForm({
     defaultValues:
@@ -84,11 +83,24 @@ export default function UserForm({ mode, user, onClose }: UserFormProps) {
             emailVerified: user.emailVerified,
           }
         : DEFAULT_FORM,
-    validators: { onSubmit: userSchema },
+    validators: {
+      onSubmit: ({ value }) => {
+        const schema = mode === "create" ? userSchema : userEditSchema;
+        const result = schema.safeParse(value);
+
+        if (!result.success) {
+          return {
+            fields: z.flattenError(result.error).fieldErrors,
+          };
+        }
+
+        return undefined;
+      },
+    },
     onSubmit: async ({ value }) => {
       setGlobalError("");
       if (mode === "create") {
-        createUser.mutate(value as UserSchemaType, {
+        create.mutate(value as UserSchemaType, {
           onError: (err) => {
             setGlobalError(getAuthErrorMessage(err));
           },
@@ -102,15 +114,16 @@ export default function UserForm({ mode, user, onClose }: UserFormProps) {
               },
             );
             form.reset();
-            queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+            queryClient.invalidateQueries({ queryKey: ["users"] });
             onClose();
           },
         });
       } else {
-        updateUser.mutate(value as UserSchemaType, {
+        update.mutate(value as UserEditSchemaType, {
           onError: (err) =>
             setGlobalError(err?.message ?? "Erreur lors de la mise à jour"),
           onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["users"] });
             onClose();
           },
         });
@@ -164,7 +177,9 @@ export default function UserForm({ mode, user, onClose }: UserFormProps) {
             <form.Field name="lastname">
               {(field) => (
                 <div className="space-y-1.5">
-                  <Label htmlFor={field.name}>Nom</Label>
+                  <Label htmlFor={field.name}>
+                    Nom <Required />
+                  </Label>
                   <Input
                     id={field.name}
                     name={field.name}
@@ -183,11 +198,8 @@ export default function UserForm({ mode, user, onClose }: UserFormProps) {
                   />
                   <InputErrorContainer>
                     {field.state.meta.isTouched &&
-                      field.state.meta.errors.map((error) => (
-                        <InputErrorMessage
-                          key={error?.message}
-                          message={error?.message}
-                        />
+                      field.state.meta.errors.map((error, i) => (
+                        <InputErrorMessage key={i} message={error} />
                       ))}
                   </InputErrorContainer>
                 </div>
@@ -197,7 +209,10 @@ export default function UserForm({ mode, user, onClose }: UserFormProps) {
             <form.Field name="firstname">
               {(field) => (
                 <div className="space-y-1.5">
-                  <Label htmlFor={field.name}>Prénom</Label>
+                  <Label htmlFor={field.name}>
+                    Prénom
+                    <Required />
+                  </Label>
                   <Input
                     id={field.name}
                     name={field.name}
@@ -216,54 +231,55 @@ export default function UserForm({ mode, user, onClose }: UserFormProps) {
                   />
                   <InputErrorContainer>
                     {field.state.meta.isTouched &&
-                      field.state.meta.errors.map((error) => (
-                        <InputErrorMessage
-                          key={error?.message}
-                          message={error?.message}
-                        />
+                      field.state.meta.errors.map((error, i) => (
+                        <InputErrorMessage key={i} message={error} />
                       ))}
                   </InputErrorContainer>
                 </div>
               )}
             </form.Field>
 
-            <form.Field name="email">
-              {(field) => (
-                <div className="space-y-1.5">
-                  <Label htmlFor={field.name}>Adresse email</Label>
-                  <Input
-                    id={field.name}
-                    name={field.name}
-                    type="email"
-                    placeholder="vous@exemple.com"
-                    icon={Mail}
-                    value={field.state.value}
-                    hasError={
-                      field.state.meta.isTouched && !field.state.meta.isValid
-                    }
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    onBlur={field.handleBlur}
-                    position="left"
-                    autoComplete="email"
-                    className="min-w-auto w-full rounded-lg"
-                  />
-                  <InputErrorContainer>
-                    {field.state.meta.isTouched &&
-                      field.state.meta.errors.map((error) => (
-                        <InputErrorMessage
-                          key={error?.message}
-                          message={error?.message}
-                        />
-                      ))}
-                  </InputErrorContainer>
-                </div>
-              )}
-            </form.Field>
-
+            {mode === "create" && (
+              <form.Field name="email">
+                {(field) => (
+                  <div className="space-y-1.5">
+                    <Label htmlFor={field.name}>
+                      Adresse email
+                      <Required />
+                    </Label>
+                    <Input
+                      id={field.name}
+                      name={field.name}
+                      type="email"
+                      placeholder="vous@exemple.com"
+                      icon={Mail}
+                      value={field.state.value}
+                      hasError={
+                        field.state.meta.isTouched && !field.state.meta.isValid
+                      }
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      onBlur={field.handleBlur}
+                      position="left"
+                      autoComplete="email"
+                      className="min-w-auto w-full rounded-lg"
+                    />
+                    <InputErrorContainer>
+                      {field.state.meta.isTouched &&
+                        field.state.meta.errors.map((error, i) => (
+                          <InputErrorMessage key={i} message={error} />
+                        ))}
+                    </InputErrorContainer>
+                  </div>
+                )}
+              </form.Field>
+            )}
             <form.Field name="phone">
               {(field) => (
                 <div className="space-y-1.5">
-                  <Label htmlFor={field.name}>Numéro de téléphone</Label>
+                  <Label htmlFor={field.name}>
+                    Numéro de téléphone
+                    <Required type="optional" />
+                  </Label>
                   <Input
                     id={field.name}
                     name={field.name}
@@ -279,14 +295,12 @@ export default function UserForm({ mode, user, onClose }: UserFormProps) {
                     position="left"
                     autoComplete="tel"
                     className="min-w-auto w-full rounded-lg"
+                    required={false}
                   />
                   <InputErrorContainer>
                     {field.state.meta.isTouched &&
-                      field.state.meta.errors.map((error) => (
-                        <InputErrorMessage
-                          key={error?.message}
-                          message={error?.message}
-                        />
+                      field.state.meta.errors.map((error, i) => (
+                        <InputErrorMessage key={i} message={error} />
                       ))}
                   </InputErrorContainer>
                 </div>
@@ -303,7 +317,9 @@ export default function UserForm({ mode, user, onClose }: UserFormProps) {
           <form.Field name="city">
             {(field) => (
               <div className="space-y-1.5">
-                <Label htmlFor={field.name}>Ville</Label>
+                <Label htmlFor={field.name}>
+                  Ville <Required />
+                </Label>
                 <Combobox
                   items={congoCities}
                   value={field.state.value ?? ""}
@@ -315,163 +331,217 @@ export default function UserForm({ mode, user, onClose }: UserFormProps) {
                 />
                 <InputErrorContainer>
                   {field.state.meta.isTouched &&
-                    field.state.meta.errors.map((error) => (
-                      <InputErrorMessage
-                        key={error?.message}
-                        message={error?.message}
-                      />
+                    field.state.meta.errors.map((error, i) => (
+                      <InputErrorMessage key={i} message={error} />
                     ))}
                 </InputErrorContainer>
               </div>
             )}
           </form.Field>
         </div>
-
         <Separator className="dark:bg-neutral-800" />
 
-        {/* Rôle */}
-        <div>
-          <Heading>Permissions & Sécurité</Heading>
-          <form.Field name="role">
-            {(field) => (
-              <div className="space-y-1.5">
-                <Label htmlFor={field.name}>Rôle</Label>
-                <Combobox
-                  items={roles}
-                  value={field.state.value}
-                  onChange={(value) => field.handleChange(value as Role)}
-                  onBlur={field.handleBlur}
-                  icon={ShieldCog}
-                  placeholder="Sélectionner un rôle"
-                  emptyLabel="Aucun rôle trouvé."
-                />
-                <InputErrorContainer>
-                  {field.state.meta.isTouched &&
-                    field.state.meta.errors.map((error) => (
-                      <InputErrorMessage
-                        key={error?.message}
-                        message={error?.message}
-                      />
-                    ))}
-                </InputErrorContainer>
-              </div>
-            )}
-          </form.Field>
-          <form.Subscribe selector={(state) => state.values.role}>
-            {(role) => {
-              switch (role) {
-                case "WORKSPACE":
-                  form.setFieldValue("plan", Plan.STARTER);
-                  break;
-                default:
-                  form.setFieldValue("plan", Plan.FREE);
-                  break;
-              }
-              return (
-                <form.Field name="plan">
-                  {(field) => (
-                    <div className="space-y-1.5">
-                      <Label htmlFor={field.name}>Plan</Label>
-                      <Combobox
-                        items={
-                          role !== Role.WORKSPACE
-                            ? getPlans([Plan.FREE])
-                            : getPlans([Plan.STARTER, Plan.PRO, Plan.BUSINESS])
-                        }
-                        value={field.state.value}
-                        onChange={(value) => field.handleChange(value as Plan)}
-                        onBlur={field.handleBlur}
-                        icon={BadgeDollarSign}
-                        placeholder="Sélectionner un plan"
-                        emptyLabel="Aucun plan trouvé."
-                      />
-                      <InputErrorContainer>
-                        {field.state.meta.isTouched &&
-                          field.state.meta.errors.map((error) => (
-                            <InputErrorMessage
-                              key={error?.message}
-                              message={error?.message}
-                            />
-                          ))}
-                      </InputErrorContainer>
-                    </div>
-                  )}
-                </form.Field>
-              );
-            }}
-          </form.Subscribe>
+        {mode === "create" && (
+          <>
+            {/* Rôle */}
+            <div>
+              <Heading>Permissions & Sécurité</Heading>
+              <form.Field
+                name="role"
+                listeners={{
+                  onChange: ({ value }) => {
+                    form.setFieldValue(
+                      "plan",
+                      value === Role.WORKSPACE ? Plan.STARTER : Plan.FREE,
+                    );
+                  },
+                }}
+              >
+                {(field) => (
+                  <div className="space-y-1.5">
+                    <Label htmlFor={field.name}>
+                      Rôle
+                      <Required />
+                    </Label>
+                    <Combobox
+                      items={roles}
+                      value={field.state.value}
+                      onChange={(value) => field.handleChange(value as Role)}
+                      onBlur={field.handleBlur}
+                      icon={ShieldCog}
+                      placeholder="Sélectionner un rôle"
+                      emptyLabel="Aucun rôle trouvé."
+                    />
+                    <InputErrorContainer>
+                      {field.state.meta.isTouched &&
+                        field.state.meta.errors.map((error, i) => (
+                          <InputErrorMessage key={i} message={error} />
+                        ))}
+                    </InputErrorContainer>
+                  </div>
+                )}
+              </form.Field>
 
-          <form.Field name="password">
-            {(field) => (
-              <div className="space-y-2">
-                <Label htmlFor={field.name}>Mot de passe</Label>
-                <Input
-                  id={field.name}
-                  name={field.name}
-                  type="password"
-                  placeholder="••••••••"
-                  icon={Lock}
-                  value={field.state.value}
-                  hasError={
-                    field.state.meta.isTouched && !field.state.meta.isValid
-                  }
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  onBlur={field.handleBlur}
-                  position="left"
-                  autoComplete="new-password"
-                  className="min-w-auto w-full rounded-lg"
-                />
-                <InputErrorContainer>
-                  {field.state.meta.isTouched &&
-                    field.state.meta.errors.map((error) => (
-                      <InputErrorMessage
-                        key={error?.message}
-                        message={error?.message}
-                      />
-                    ))}
-                </InputErrorContainer>
-              </div>
-            )}
-          </form.Field>
-        </div>
+              <form.Subscribe selector={(state) => state.values.role}>
+                {(role) => (
+                  <form.Field name="plan">
+                    {(field) => (
+                      <div className="space-y-1.5">
+                        <Label htmlFor={field.name}>
+                          Plan
+                          <Required />
+                        </Label>
+                        <Combobox
+                          items={
+                            role !== Role.WORKSPACE
+                              ? getPlans([Plan.FREE])
+                              : getPlans([
+                                  Plan.STARTER,
+                                  Plan.PRO,
+                                  Plan.BUSINESS,
+                                ])
+                          }
+                          value={field.state.value}
+                          onChange={(value) =>
+                            field.handleChange(value as Plan)
+                          }
+                          onBlur={field.handleBlur}
+                          icon={BadgeDollarSign}
+                          placeholder="Sélectionner un plan"
+                          emptyLabel="Aucun plan trouvé."
+                        />
+                        <InputErrorContainer>
+                          {field.state.meta.isTouched &&
+                            field.state.meta.errors.map((error, i) => (
+                              <InputErrorMessage key={i} message={error} />
+                            ))}
+                        </InputErrorContainer>
+                      </div>
+                    )}
+                  </form.Field>
+                )}
+              </form.Subscribe>
 
-        <Separator className="dark:bg-neutral-800" />
+              <form.Field name="password">
+                {(field) => (
+                  <div className="space-y-2">
+                    <Label htmlFor={field.name}>
+                      Mot de passe
+                      <Required />
+                    </Label>
+                    <Input
+                      id={field.name}
+                      name={field.name}
+                      type="password"
+                      placeholder="••••••••"
+                      icon={Lock}
+                      value={field.state.value}
+                      hasError={
+                        field.state.meta.isTouched && !field.state.meta.isValid
+                      }
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      onBlur={field.handleBlur}
+                      position="left"
+                      autoComplete="new-password"
+                      className="min-w-auto w-full rounded-lg"
+                    />
+                    <InputErrorContainer>
+                      {field.state.meta.isTouched &&
+                        field.state.meta.errors.map((error, i) => (
+                          <InputErrorMessage key={i} message={error} />
+                        ))}
+                    </InputErrorContainer>
+                  </div>
+                )}
+              </form.Field>
+            </div>
+            <Separator className="dark:bg-neutral-800" />
+          </>
+        )}
 
         {/* Vérifications */}
-        <div>
-          <Heading>Vérifications</Heading>
-          <form.Field name="emailVerified">
-            {(field) => (
-              <div className="space-y-1.5">
-                <div
-                  className={cn(
-                    "w-full border-input dark:border-neutral-800 border px-2.5 py-3 rounded-md flex gap-x-2 justify-between items-center transition-all",
-                    field.state.value &&
-                      "border-amber-400 ring-[3px] ring-amber-400/20",
-                  )}
-                >
-                  <div>
-                    <Label
-                      htmlFor={field.name}
-                      className="text-neutral-600 dark:text-neutral-300"
-                    >
-                      Email vérifié
-                    </Label>
-                    <p className="text-[11px] text-neutral-400 dark:text-neutral-500 mt-0.5">
-                      {field.state.value
-                        ? "Compte actif immédiatement"
-                        : "Un OTP sera envoyé pour confirmation"}
-                    </p>
+        {mode === "create" && (
+          <div>
+            <Heading>Vérifications</Heading>
+            <form.Field name="emailVerified">
+              {(field) => (
+                <div className="space-y-1.5">
+                  <div
+                    className={cn(
+                      "w-full border-input dark:border-neutral-800 border px-2.5 py-3 rounded-md flex gap-x-2 justify-between items-center transition-all",
+                      field.state.value &&
+                        "border-amber-400 ring-[3px] ring-amber-400/20",
+                    )}
+                  >
+                    <div>
+                      <Label
+                        htmlFor={field.name}
+                        className="text-neutral-600 dark:text-neutral-300"
+                      >
+                        Email vérifié
+                        <Required />
+                      </Label>
+                      <p className="text-[11px] text-neutral-400 dark:text-neutral-500 mt-0.5">
+                        {field.state.value
+                          ? "Compte actif immédiatement"
+                          : "Un OTP sera envoyé pour confirmation"}
+                      </p>
+                    </div>
+                    <Switch
+                      checked={field.state.value}
+                      onCheckedChange={field.handleChange}
+                    />
                   </div>
-                  <Switch
-                    checked={field.state.value}
-                    onCheckedChange={field.handleChange}
-                  />
                 </div>
-              </div>
-            )}
-          </form.Field>
-        </div>
+              )}
+            </form.Field>
+          </div>
+        )}
+        {mode === "edit" && form.state.values.emailVerified && (
+          <AlertMessage
+            type="success"
+            title="Adresse e-mail vérifiée"
+            description="L'adresse e-mail de cet utilisateur a été vérifiée avec succès."
+            className="mt-0"
+          />
+        )}
+        {mode === "edit" && !form.state.values.emailVerified && (
+          <div>
+            <Heading>Vérifications</Heading>
+            <form.Field name="emailVerified">
+              {(field) => (
+                <div className="space-y-1.5">
+                  <div
+                    className={cn(
+                      "w-full border-input dark:border-neutral-800 border px-2.5 py-3 rounded-md flex gap-x-2 justify-between items-center transition-all",
+                      field.state.value &&
+                        "border-amber-400 ring-[3px] ring-amber-400/20",
+                    )}
+                  >
+                    <div>
+                      <Label
+                        htmlFor={field.name}
+                        className="text-neutral-600 dark:text-neutral-300"
+                      >
+                        Email vérifié
+                        <Required />
+                      </Label>
+                      <p className="text-[11px] text-neutral-400 dark:text-neutral-500 mt-0.5">
+                        {field.state.value
+                          ? "Compte actif immédiatement"
+                          : "Un OTP sera envoyé pour confirmation"}
+                      </p>
+                    </div>
+                    <Switch
+                      checked={field.state.value}
+                      onCheckedChange={field.handleChange}
+                    />
+                  </div>
+                </div>
+              )}
+            </form.Field>
+          </div>
+        )}
 
         {/* Erreur globale (API) */}
         {globalError && (
@@ -494,27 +564,25 @@ export default function UserForm({ mode, user, onClose }: UserFormProps) {
           <Button
             variant="amber"
             type="submit"
-            disabled={
-              mode === "create" ? createUser.isPending : updateUser.isPending
-            }
+            disabled={mode === "create" ? create.isPending : update.isPending}
             className="rounded-md"
           >
             {mode === "create" ? (
-              createUser.isPending ? (
+              create.isPending ? (
                 <Loader2 className="size-4 animate-spin" />
               ) : (
                 <Save className="size-4" />
               )
-            ) : updateUser.isPending ? (
+            ) : update.isPending ? (
               <Loader2 className="size-4 animate-spin" />
             ) : (
               <Save className="size-4" />
             )}
             {mode === "create"
-              ? createUser.isPending
+              ? create.isPending
                 ? "Création…"
                 : "Créer"
-              : updateUser.isPending
+              : update.isPending
                 ? "Mise à jour…"
                 : "Mettre à jour"}
           </Button>

@@ -32,9 +32,38 @@ export const userSchema = z.object({
   emailVerified: z.boolean(),
 });
 
+export const userEditSchema = z.object({
+  lastname: z
+    .string({ error: "Le nom est invalide." })
+    .trim()
+    .min(2, { error: "Le nom doit contenir au moins 2 caractères." }),
+  firstname: z
+    .string({ error: "Le prénom est invalide." })
+    .trim()
+    .min(2, { error: "Le prénom doit contenir au moins 2 caractères." }),
+  phone: z
+    .string({ error: "Le numéro de téléphone est invalide." })
+    .trim()
+    .length(9, { error: "Le numéro de téléphone doit contenir 9 chiffres." }),
+  city: z.string().optional(),
+  emailVerified: z.boolean().optional(),
+});
+
 export const emailSchema = z.object({
   email: z
     .email({ error: "Adresse email invalide." })
     .trim()
     .min(1, { error: "L'email est requis." }),
+});
+
+export const planSchema = z.enum(["FREE", "PRO", "BUSINESS"], {
+  error: "Le plan de l'utilisateur est obligatoire.",
+});
+
+export const roleSchema = z.enum(["ADMIN", "USER", "WORKSPACE"], {
+  error: "Le role de l'utilisateur est obligatoire.",
+});
+
+export const idSchema = z.object({
+  id: z.string({ error: "L'id est requis." }),
 });

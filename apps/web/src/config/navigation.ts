@@ -16,6 +16,6 @@ export const adminNavLinks = [
   { to: "/admin/billing", label: "Facturation", icon: CreditCard },
   { to: "/admin/analytics", label: "Analytique", icon: BarChart2 },
   { to: "/admin/moderation", label: "Modération", icon: ShieldAlert },
-  { to: "/admin/logs", label: "Journaux", icon: ScrollText },
+  { to: "/admin/monitoring", label: "Centre d'activité", icon: ScrollText },
   { to: "/admin/settings", label: "Paramètres", icon: Settings },
 ];

@@ -1,133 +1,395 @@
-model Action {
-id String @id @default(cuid())
-type ActionType
+model Verification {
+id String @id
+identifier String
+value String
+expiresAt DateTime
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
 
-    businessId String
-    business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+    @@index([identifier])
+    @@map("verification")
 
-    title       String
-    description String?
-    fields      Json
+}
 
-    status ActionStatus @default(OPEN)
+model User {
+id String @id
+role Role @default(USER)
+firstname String
+lastname String
+name String
+email String @unique
+phone String? @unique
+emailVerified Boolean @default(false)
+idVerified Boolean @default(false)
+image String?
 
-    submissions ActionSubmission[]
+    country String?
+    city    String?
+
+    banned     Boolean   @default(false)
+    banReason  String?
+    banExpires DateTime?
+
+    lastSeenAt         DateTime?
+    suspiciousActivity Boolean   @default(false)
+
+    creationSource UserCreationSource @default(SELF_REGISTRATION)
+    createdById    String?
+    createdBy      User?              @relation("UserCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+    createdUsers   User[]             @relation("UserCreatedBy")
+    createdByName  String?
+
+    subscriptions     Subscription[]
+    accounts          Account[]
+    sessions          Session[]
+    ips               UserIp[]
+    payments          Payment[]
+    certifications    Certification[]
+    businesses        Business[]
+    publications      Publication[]
+    storageFiles      StorageFile[]
+    actionSubmissions ActionSubmission[]
+    addonPurchases    AddonPurchase[]
+
+    activityLogs           ActivityLog[]
+    notifications          Notification[]
+    notificationPreference NotificationPreference?
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
-    @@map("action")
+    @@unique([email, phone])
+    @@map("user")
 
 }
 
-model ActionSubmission {
+model UsageQuota {
 id String @id @default(cuid())
 
-    actionId String
-    action   Action @relation(fields: [actionId], references: [id], onDelete: Cascade)
+    subscriptionId String
+    subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
 
-    userId String
-    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+    periodStart DateTime
+    periodEnd   DateTime
 
-    data   Json
-    status SubmissionStatus @default(PENDING)
+    storageUsedMb    Int @default(0)
+    publicationsUsed Int @default(0)
+    sondagesUsed     Int @default(0)
+    annoncesUsed     Int @default(0)
+    actionsUsed      Int @default(0)
+
+    bonusStorageMb    Int @default(0)
+    bonusPublications Int @default(0)
+    bonusSondages     Int @default(0)
+    bonusAnnonces     Int @default(0)
+
+    @@unique([subscriptionId, periodStart])
+    @@map("usage_quota")
+
+}
+
+model VerificationTokenLog {
+id String @id @default(cuid())
+tokenHash String @unique
+createdAt DateTime @default(now())
+
+    @@index([createdAt])
+    @@map("verification_token_log")
+
+}
+
+model Subscription {
+id String @id @default(cuid())
+userId String
+businessId String?
+
+    planId String
+    plan   Plan   @relation(fields: [planId], references: [id])
+
+    status    SubscriptionStatus @default(ACTIVE)
+    startDate DateTime           @default(now())
+    endDate   DateTime
+    autoRenew Boolean            @default(true)
+
+    user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+    business Business? @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+    quotas   UsageQuota[]
+    payments Payment[]
+
+    createdAt      DateTime        @default(now())
+    updatedAt      DateTime        @updatedAt
+    addonPurchases AddonPurchase[]
+
+    @@map("subscription")
+
+}
+
+model StorageFile {
+id String @id @default(cuid())
+kind FileKind
+url String
+sizeMb Float
+
+    ownerId String
+    owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+    businessId String?
+    business   Business? @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+    publicationId String?
+    publication   Publication? @relation(fields: [publicationId], references: [id], onDelete: Cascade)
 
     createdAt DateTime @default(now())
 
-    @@map("action_submission")
+    @@map("storage_file")
 
 }
 
-model Addon {
+model Session {
+id String @id
+expiresAt DateTime
+token String
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+ipAddress String?
+userAgent String?
+userId String
+user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    impersonatedBy String?
+
+    @@unique([token])
+    @@index([userId])
+    @@map("session")
+
+}
+
+model RateLimit {
+id String @id
+key String
+count Int
+lastRequest BigInt
+
+    @@unique([key])
+    @@map("rate_limit")
+
+}
+
+model Publication {
 id String @id @default(cuid())
-kind AddonKind
+type ContentType
+
+    authorId String
+    author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+    businessId String?
+    business   Business? @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+    title   String?
+    content String?
+
+    pollOptions Json?
+
+    files StorageFile[]
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@map("publication")
+
+}
+
+model Plan {
+id String @id @default(cuid())
+code PlanCode @unique
 name String
-description String?
-quantity Int
 priceFcfa Int
+billingPeriod BillingPeriod @default(MONTHLY)
 
-    purchases AddonPurchase[]
+    storageLimitMb        Int
+    maxPublications       Int
+    maxSondages           Int
+    maxAnnonces           Int
+    maxActions            Int
+    canCreateActions      Boolean @default(false)
+    includesCertification Boolean @default(false)
 
+    features Json?
     isActive Boolean @default(true)
 
-    @@map("addon")
+    subscriptions Subscription[]
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@map("plan")
 
 }
 
-model AddonPurchase {
+model Payment {
 id String @id @default(cuid())
 
     userId String
     user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-    addonId String
-    addon   Addon  @relation(fields: [addonId], references: [id])
 
     subscriptionId String?
     subscription   Subscription? @relation(fields: [subscriptionId], references: [id])
 
-    quantity    Int       @default(1)
-    priceFcfa   Int
-    purchasedAt DateTime  @default(now())
-    expiresAt   DateTime?
+    addonPurchaseId String?        @unique
+    addonPurchase   AddonPurchase? @relation(fields: [addonPurchaseId], references: [id])
 
-    payment Payment?
+    certificationId String?        @unique
+    certification   Certification? @relation(fields: [certificationId], references: [id])
 
-    @@map("addon_purchase")
+    amountFcfa Int
+    provider   String
+    reference  String @unique
+    status     String
+
+    createdAt DateTime @default(now())
+
+    @@map("payment")
 
 }
 
-model Business {
+model ActivityLog {
 id String @id @default(cuid())
-ownerId String
-owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
-    name        String
-    description String?
-    logo        String?
-    coverImage  String?
-    sector      String?
-    address     String?
-    city        String?
-    phone       String?
-    email       String?
+    userId String?
+    user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-    certificationStatus CertificationStatus @default(NONE)
+    userRole Role?
 
-    subscriptions  Subscription[]
-    certifications Certification[]
-    publications   Publication[]
-    actions        Action[]
-    storageFiles   StorageFile[]
+    userName  String?
+    userEmail String?
+
+    action String
+
+    status LogStatus
+    level  LogLevel  @default(INFO)
+
+    message String
+
+    errorRaw Json?
+
+    targetType String?
+    targetId   String?
+
+    metadata Json?
+
+    ipAddress String?
+    userAgent String?
+
+    durationMs Int?
+
+    createdAt DateTime @default(now())
+
+    @@index([userId])
+    @@index([status])
+    @@index([level])
+    @@index([action])
+    @@index([targetType, targetId])
+    @@index([createdAt])
+    @@map("activity_log")
+
+}
+
+// ---------------------------------------------------------------------
+// NOTIFICATIONS
+// ---------------------------------------------------------------------
+
+model Notification {
+id String @id @default(cuid())
+
+    userId String
+    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    type     NotificationType
+    category String? // regroupement libre, ex: "billing", "security", "social"
+
+    title   String
+    message String
+    data    Json? // contexte structuré, ex: { "paymentId": "...", "amount": 100 }
+
+    channel  NotificationChannel  @default(IN_APP)
+    priority NotificationPriority @default(NORMAL)
+    status   NotificationStatus   @default(PENDING)
+
+    isRead Boolean   @default(false)
+    readAt DateTime?
+
+    actionUrl String? // lien vers lequel rediriger au clic
+    icon      String?
+
+    sentAt      DateTime?
+    deliveredAt DateTime?
+    failedAt    DateTime?
+    failReason  String?
+
+    expiresAt DateTime? // pour les notifs temporaires (promos, etc.)
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
-    @@map("business")
+    @@index([userId])
+    @@index([userId, isRead])
+    @@index([type])
+    @@index([status])
+    @@index([createdAt])
+    @@map("notification")
 
 }
 
-model Certification {
+model NotificationPreference {
 id String @id @default(cuid())
 
-    target     CertificationTarget
-    userId     String?
-    businessId String?
+    userId String @unique
+    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-    user     User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
-    business Business? @relation(fields: [businessId], references: [id], onDelete: Cascade)
+    emailEnabled Boolean @default(true)
+    smsEnabled   Boolean @default(false)
+    pushEnabled  Boolean @default(true)
+    inAppEnabled Boolean @default(true)
 
-    status     CertificationStatus @default(PENDING)
-    priceFcfa  Int
-    documents  Json?
-    reviewNote String?
+    mutedTypes      NotificationType[] // types de notifs désactivés par l'user
+    mutedCategories String[] // catégories désactivées
+    // ⚠️ Ces deux champs (listes scalaires) nécessitent PostgreSQL ou CockroachDB.
+    // Si tu es en MySQL/SQLite, remplace-les par un champ unique `Json?` (ex: mutedTypes Json?)
 
-    requestedAt DateTime  @default(now())
-    reviewedAt  DateTime?
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
-    payment Payment?
+    @@map("notification_preference")
 
-    @@map("certification")
+}
+
+model Ip {
+id String @id @default(cuid())
+ip String @unique
+banned Boolean @default(false)
+banReason String?
+banExpires DateTime?
+violations Int @default(0)
+
+    users UserIp[]
+
+    @@map("ip")
+
+}
+
+model UserIp {
+userId String
+ipId String
+
+    firstSeen DateTime @default(now())
+    lastSeen  DateTime @updatedAt
+
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+    ip   Ip   @relation(fields: [ipId], references: [id], onDelete: Cascade)
+
+    @@id([userId, ipId])
+    @@map("user_ip")
 
 }
 
@@ -139,6 +401,7 @@ WORKSPACE
 
 enum PlanCode {
 FREE
+STARTER
 PRO
 BUSINESS
 }
@@ -203,196 +466,214 @@ SONDAGE
 ANNONCE
 }
 
-model Payment {
+enum UserCreationSource {
+SELF_REGISTRATION
+ADMIN
+SYSTEM
+IMPORT
+OAUTH
+API
+}
+
+enum LogStatus {
+SUCCESS
+ERROR
+WARNING
+PENDING
+}
+
+enum LogLevel {
+DEBUG
+INFO
+WARNING
+ERROR
+CRITICAL
+}
+
+enum NotificationType {
+INFO
+SUCCESS
+WARNING
+ERROR
+SECURITY
+PAYMENT
+SUBSCRIPTION
+PROMOTION
+SYSTEM
+}
+
+enum NotificationChannel {
+IN_APP
+EMAIL
+SMS
+PUSH
+}
+
+enum NotificationPriority {
+LOW
+NORMAL
+HIGH
+URGENT
+}
+
+enum NotificationStatus {
+PENDING
+SENT
+DELIVERED
+FAILED
+READ
+}
+
+model Certification {
+id String @id @default(cuid())
+
+    target     CertificationTarget
+    userId     String?
+    businessId String?
+
+    user     User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    business Business? @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+    status     CertificationStatus @default(PENDING)
+    priceFcfa  Int
+    documents  Json?
+    reviewNote String?
+
+    requestedAt DateTime  @default(now())
+    reviewedAt  DateTime?
+
+    payment Payment?
+
+    @@map("certification")
+
+}
+
+model Business {
+id String @id @default(cuid())
+ownerId String
+owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+    name        String
+    description String?
+    logo        String?
+    coverImage  String?
+    sector      String?
+    address     String?
+    city        String?
+    phone       String?
+    email       String?
+
+    certificationStatus CertificationStatus @default(NONE)
+
+    subscriptions  Subscription[]
+    certifications Certification[]
+    publications   Publication[]
+    actions        Action[]
+    storageFiles   StorageFile[]
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@map("business")
+
+}
+
+model Addon {
+id String @id @default(cuid())
+kind AddonKind
+name String
+description String?
+quantity Int
+priceFcfa Int
+
+    purchases AddonPurchase[]
+
+    isActive Boolean @default(true)
+
+    @@map("addon")
+
+}
+
+model AddonPurchase {
 id String @id @default(cuid())
 
     userId String
     user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+    addonId String
+    addon   Addon  @relation(fields: [addonId], references: [id])
+
     subscriptionId String?
     subscription   Subscription? @relation(fields: [subscriptionId], references: [id])
 
-    addonPurchaseId String?        @unique
-    addonPurchase   AddonPurchase? @relation(fields: [addonPurchaseId], references: [id])
+    quantity    Int       @default(1)
+    priceFcfa   Int
+    purchasedAt DateTime  @default(now())
+    expiresAt   DateTime?
 
-    certificationId String?        @unique
-    certification   Certification? @relation(fields: [certificationId], references: [id])
+    payment Payment?
 
-    amountFcfa Int
-    provider   String
-    reference  String @unique
-    status     String
-
-    createdAt DateTime @default(now())
-
-    @@map("payment")
+    @@map("addon_purchase")
 
 }
 
-model Plan {
+model Action {
 id String @id @default(cuid())
-code PlanCode @unique
-name String
-priceFcfa Int
-billingPeriod BillingPeriod @default(MONTHLY)
+type ActionType
 
-    storageLimitMb        Int
-    maxPublications       Int
-    maxSondages           Int
-    maxAnnonces           Int
-    maxActions            Int
-    canCreateActions      Boolean @default(false)
-    includesCertification Boolean @default(false)
+    businessId String
+    business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
 
-    features Json?
-    isActive Boolean @default(true)
+    title       String
+    description String?
+    fields      Json
 
-    subscriptions Subscription[]
+    status ActionStatus @default(OPEN)
+
+    submissions ActionSubmission[]
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
-    @@map("plan")
+    @@map("action")
 
 }
 
-model Publication {
+model ActionSubmission {
 id String @id @default(cuid())
-type ContentType
 
-    authorId String
-    author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+    actionId String
+    action   Action @relation(fields: [actionId], references: [id], onDelete: Cascade)
 
-    businessId String?
-    business   Business? @relation(fields: [businessId], references: [id], onDelete: Cascade)
+    userId String
+    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-    title   String?
-    content String?
-
-    pollOptions Json?
-
-    files StorageFile[]
-
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-
-    @@map("publication")
-
-}
-
-model StorageFile {
-id String @id @default(cuid())
-kind FileKind
-url String
-sizeMb Float
-
-    ownerId String
-    owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-
-    businessId String?
-    business   Business? @relation(fields: [businessId], references: [id], onDelete: Cascade)
-
-    publicationId String?
-    publication   Publication? @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+    data   Json
+    status SubmissionStatus @default(PENDING)
 
     createdAt DateTime @default(now())
 
-    @@map("storage_file")
+    @@map("action_submission")
 
 }
 
-model Subscription {
-id String @id @default(cuid())
-userId String
-businessId String?
-
-    planId String
-    plan   Plan   @relation(fields: [planId], references: [id])
-
-    status    SubscriptionStatus @default(ACTIVE)
-    startDate DateTime           @default(now())
-    endDate   DateTime
-    autoRenew Boolean            @default(true)
-
-    user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-    business Business? @relation(fields: [businessId], references: [id], onDelete: Cascade)
-
-    quotas   UsageQuota[]
-    payments Payment[]
-
-    createdAt      DateTime        @default(now())
-    updatedAt      DateTime        @updatedAt
-    addonPurchases AddonPurchase[]
-
-    @@map("subscription")
-
-}
-
-model UsageQuota {
-id String @id @default(cuid())
-
-    subscriptionId String
-    subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
-
-    periodStart DateTime
-    periodEnd   DateTime
-
-    storageUsedMb    Int @default(0)
-    publicationsUsed Int @default(0)
-    sondagesUsed     Int @default(0)
-    annoncesUsed     Int @default(0)
-    actionsUsed      Int @default(0)
-
-    bonusStorageMb    Int @default(0)
-    bonusPublications Int @default(0)
-    bonusSondages     Int @default(0)
-    bonusAnnonces     Int @default(0)
-
-    @@unique([subscriptionId, periodStart])
-    @@map("usage_quota")
-
-}
-
-model User {
+model Account {
 id String @id
-role Role @default(USER)
-firstname String
-lastname String
-name String
-email String
-phone String? @unique
-emailVerified Boolean @default(false)
-idVerified Boolean @default(false)
-image String?
+accountId String
+providerId String
+userId String
+user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+accessToken String?
+refreshToken String?
+idToken String?
+accessTokenExpiresAt DateTime?
+refreshTokenExpiresAt DateTime?
+scope String?
+password String?
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
 
-    country String?
-    city    String?
-
-    banned     Boolean   @default(false)
-    banReason  String?
-    banExpires DateTime?
-
-    lastSeenAt         DateTime?
-    suspiciousActivity Boolean   @default(false)
-
-    subscriptions     Subscription[]
-    accounts          Account[]
-    sessions          Session[]
-    ips               UserIp[]
-    payments          Payment[]
-    certifications    Certification[]
-    businesses        Business[]
-    publications      Publication[]
-    storageFiles      StorageFile[]
-    actionSubmissions ActionSubmission[]
-    addonPurchases    AddonPurchase[]
-
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-
-    @@unique([email, phone])
-    @@map("user")
+    @@index([userId])
+    @@map("account")
 
 }
-
-voila mes schema pour le systeme de souscription a un plan, en gros je t explique un user a 3 role user, workspace et admin, le user c est celui quand tu cree ton compte il est free l admin c est pour l administrateur lui il peut tout faire et le workspace c est quand tu prend un abonnement, y en a 3 Starter Pro Business et chaque abonnement quotient ces aventages, je veux que tu me cree un systeme d abonnement avec elysia et que tu me cree un systeme de payement fake pour valider le payement et avoir access a l abonnement et a ces avantages j aimerais qu il soit complet pro et bien fais cree aussi un visuel de cela avec tanstack router et react ts pour pouvoir tester tout cela si tu dois completer ou ameliorer des chose fais le pour une meilleur securité et eviter les failles pour l auth en cas de besoin c est better auth

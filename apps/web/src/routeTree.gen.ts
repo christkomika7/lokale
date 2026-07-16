@@ -23,6 +23,7 @@ import { Route as privateAdminRouteRouteImport } from './routes/(private)/admin/
 import { Route as privateWorkspaceIndexRouteImport } from './routes/(private)/workspace/index'
 import { Route as privateUserIndexRouteImport } from './routes/(private)/user/index'
 import { Route as privateAdminIndexRouteImport } from './routes/(private)/admin/index'
+import { Route as privateAdminWorkspaceRouteImport } from './routes/(private)/admin/workspace'
 import { Route as privateAdminUsersRouteImport } from './routes/(private)/admin/users'
 
 const publicRouteRoute = publicRouteRouteImport.update({
@@ -93,6 +94,11 @@ const privateAdminIndexRoute = privateAdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => privateAdminRouteRoute,
 } as any)
+const privateAdminWorkspaceRoute = privateAdminWorkspaceRouteImport.update({
+  id: '/workspace',
+  path: '/workspace',
+  getParentRoute: () => privateAdminRouteRoute,
+} as any)
 const privateAdminUsersRoute = privateAdminUsersRouteImport.update({
   id: '/users',
   path: '/users',
@@ -110,6 +116,7 @@ export interface FileRoutesByFullPath {
   '/subscription': typeof publicSubscriptionRoute
   '/': typeof publicIndexRoute
   '/admin/users': typeof privateAdminUsersRoute
+  '/admin/workspace': typeof privateAdminWorkspaceRoute
   '/admin/': typeof privateAdminIndexRoute
   '/user/': typeof privateUserIndexRoute
   '/workspace/': typeof privateWorkspaceIndexRoute
@@ -124,6 +131,7 @@ export interface FileRoutesByTo {
   '/subscription': typeof publicSubscriptionRoute
   '/': typeof publicIndexRoute
   '/admin/users': typeof privateAdminUsersRoute
+  '/admin/workspace': typeof privateAdminWorkspaceRoute
   '/admin': typeof privateAdminIndexRoute
   '/user': typeof privateUserIndexRoute
   '/workspace': typeof privateWorkspaceIndexRoute
@@ -142,6 +150,7 @@ export interface FileRoutesById {
   '/(public)/subscription': typeof publicSubscriptionRoute
   '/(public)/': typeof publicIndexRoute
   '/(private)/admin/users': typeof privateAdminUsersRoute
+  '/(private)/admin/workspace': typeof privateAdminWorkspaceRoute
   '/(private)/admin/': typeof privateAdminIndexRoute
   '/(private)/user/': typeof privateUserIndexRoute
   '/(private)/workspace/': typeof privateWorkspaceIndexRoute
@@ -159,6 +168,7 @@ export interface FileRouteTypes {
     | '/subscription'
     | '/'
     | '/admin/users'
+    | '/admin/workspace'
     | '/admin/'
     | '/user/'
     | '/workspace/'
@@ -173,6 +183,7 @@ export interface FileRouteTypes {
     | '/subscription'
     | '/'
     | '/admin/users'
+    | '/admin/workspace'
     | '/admin'
     | '/user'
     | '/workspace'
@@ -190,6 +201,7 @@ export interface FileRouteTypes {
     | '/(public)/subscription'
     | '/(public)/'
     | '/(private)/admin/users'
+    | '/(private)/admin/workspace'
     | '/(private)/admin/'
     | '/(private)/user/'
     | '/(private)/workspace/'
@@ -306,6 +318,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof privateAdminIndexRouteImport
       parentRoute: typeof privateAdminRouteRoute
     }
+    '/(private)/admin/workspace': {
+      id: '/(private)/admin/workspace'
+      path: '/workspace'
+      fullPath: '/admin/workspace'
+      preLoaderRoute: typeof privateAdminWorkspaceRouteImport
+      parentRoute: typeof privateAdminRouteRoute
+    }
     '/(private)/admin/users': {
       id: '/(private)/admin/users'
       path: '/users'
@@ -318,11 +337,13 @@ declare module '@tanstack/react-router' {
 
 interface privateAdminRouteRouteChildren {
   privateAdminUsersRoute: typeof privateAdminUsersRoute
+  privateAdminWorkspaceRoute: typeof privateAdminWorkspaceRoute
   privateAdminIndexRoute: typeof privateAdminIndexRoute
 }
 
 const privateAdminRouteRouteChildren: privateAdminRouteRouteChildren = {
   privateAdminUsersRoute: privateAdminUsersRoute,
+  privateAdminWorkspaceRoute: privateAdminWorkspaceRoute,
   privateAdminIndexRoute: privateAdminIndexRoute,
 }
 

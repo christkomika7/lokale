@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -7,11 +6,13 @@ import {
 import { Button } from "../ui/button";
 import { Loader2, type LucideIcon } from "lucide-react";
 import DialogHeader from "./components/dialog-header";
+import Loader from "../ui/loader";
 
 interface ConfirmActionDialogProps {
   open: boolean;
+  loading: boolean;
   onOpenChange: (open: boolean) => void;
-  onConfirm: () => Promise<void> | void;
+  onConfirm: () => void;
   icon: LucideIcon;
   title: string;
   description: string;
@@ -21,6 +22,7 @@ interface ConfirmActionDialogProps {
 
 export function ConfirmActionDialog({
   open,
+  loading,
   onOpenChange,
   onConfirm,
   icon: Icon,
@@ -29,16 +31,10 @@ export function ConfirmActionDialog({
   confirmLabel,
   variant = "default",
 }: ConfirmActionDialogProps) {
-  const [loading, setLoading] = useState(false);
-
   const handleConfirm = async () => {
-    setLoading(true);
     try {
-      await onConfirm();
-      onOpenChange(false);
-    } finally {
-      setLoading(false);
-    }
+      onConfirm();
+    } catch {}
   };
 
   return (
@@ -68,7 +64,7 @@ export function ConfirmActionDialog({
             onClick={handleConfirm}
             disabled={loading}
           >
-            {loading && <Loader2 className="size-4 animate-spin" />}
+            {loading && <Loader />}
             {confirmLabel}
           </Button>
         </AlertDialogFooter>
