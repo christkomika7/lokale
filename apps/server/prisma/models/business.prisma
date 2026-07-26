@@ -4,14 +4,21 @@ model Business {
     owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
     name        String
+    slug        String  @unique
     description String?
+    category    String?
     logo        String?
-    coverImage  String?
-    sector      String?
-    address     String?
-    city        String?
-    phone       String?
-    email       String?
+    cover       String?
+
+    sector  String?
+    address String?
+    city    String?
+    phone   String?
+    email   String?
+
+    status     BusinessStatus @default(PENDING)
+    verified   Boolean        @default(false)
+    verifiedAt DateTime?
 
     certificationStatus CertificationStatus @default(NONE)
 
@@ -24,5 +31,7 @@ model Business {
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
+    @@index([ownerId])
+    @@index([status])
     @@map("business")
 }

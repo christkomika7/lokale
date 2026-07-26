@@ -1,3 +1,5 @@
+import type { LucideIcon } from "lucide-react";
+
 export type TabKey =
   | "general"
   | "security"
@@ -6,3 +8,11 @@ export type TabKey =
   | "integrations"
   | "geomanager"
   | "categories";
+
+export type NavLink = {
+  to: string;
+  label: string;
+  icon: LucideIcon;
+  variant?: "success" | "danger";
+  notification?: number;
+};

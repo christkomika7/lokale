@@ -1,0 +1,32 @@
+model SuspiciousActivity {
+    id String @id @default(cuid())
+
+    userId String?
+    user   User?   @relation("SuspiciousActivities", fields: [userId], references: [id], onDelete: SetNull)
+
+    type     SuspiciousActivityType
+    severity LogLevel               @default(WARNING) // réutilise l'enum existant
+
+    description String
+    metadata    Json?
+
+    ipAddress String?
+    userAgent String?
+
+    status SuspiciousActivityStatus @default(OPEN)
+
+    reviewedById String?
+    reviewedBy   User?     @relation("SuspiciousActivitiesReviewed", fields: [reviewedById], references: [id], onDelete: SetNull)
+    reviewedAt   DateTime?
+
+    sanctionId String?
+    sanction   Sanction? @relation(fields: [sanctionId], references: [id], onDelete: SetNull)
+
+    createdAt DateTime @default(now())
+
+    @@index([userId])
+    @@index([type])
+    @@index([status])
+    @@index([createdAt])
+    @@map("suspicious_activity")
+}

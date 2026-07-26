@@ -1,0 +1,17 @@
+model System {
+    id          String  @id @default(cuid())
+    maintenance Boolean @default(false)
+    googleAuth  Boolean @default(false)
+    rateLimit   Int     @default(1000)
+    uploadLimit Int     @default(1000)
+
+    sms       Boolean @default(false)
+    whatsapp  Boolean @default(false)
+    facebook  Boolean @default(false)
+    instagram Boolean @default(false)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@map("system")
+}

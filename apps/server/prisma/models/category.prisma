@@ -1,0 +1,24 @@
+model Category {
+    id          String  @id @default(cuid())
+    name        String
+    slug        String
+    description String
+    color       String?
+    icon        String?
+
+    subCategories SubCategory[]
+
+    @@map("category")
+}
+
+model SubCategory {
+    id          String @id @default(cuid())
+    name        String
+    slug        String
+    description String
+
+    categoryID String
+    category   Category @relation(fields: [categoryID], references: [id])
+
+    @@map("sub_category")
+}

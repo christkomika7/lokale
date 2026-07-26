@@ -132,3 +132,99 @@ enum NotificationStatus {
     FAILED
     READ
 }
+
+enum BusinessStatus {
+    PENDING
+    ACTIVE
+    SUSPENDED
+    CLOSED
+}
+
+enum EntityType {
+    USER
+    BUSINESS
+    ANNONCE
+    PUBLICATION
+    SONDAGE
+    MESSAGE
+    COMMENT
+    REVIEW
+}
+
+enum ReportReason {
+    SPAM
+    HARASSMENT
+    FRAUD_SCAM
+    FAKE_ACCOUNT
+    IMPERSONATION
+    INAPPROPRIATE_CONTENT
+    HATE_SPEECH
+    VIOLENCE_THREAT
+    ILLEGAL_CONTENT
+    INTELLECTUAL_PROPERTY
+    MISLEADING_INFO
+    OTHER
+}
+
+enum ReportStatus {
+    PENDING
+    UNDER_REVIEW
+    RESOLVED
+    REJECTED
+    DUPLICATE
+}
+
+enum ReportPriority {
+    LOW
+    NORMAL
+    HIGH
+    CRITICAL
+}
+
+enum SuspiciousActivityType {
+    MULTIPLE_FAILED_LOGIN
+    RATE_LIMIT_EXCEEDED
+    MULTIPLE_ACCOUNTS_SAME_DEVICE
+    UNUSUAL_LOCATION
+    BOT_BEHAVIOR
+    PAYMENT_FRAUD_ATTEMPT
+    CONTENT_ABUSE
+    ACCOUNT_TAKEOVER_ATTEMPT
+    OTHER
+}
+
+enum SuspiciousActivityStatus {
+    OPEN
+    REVIEWED
+    DISMISSED
+    ESCALATED
+}
+
+enum SanctionType {
+    WARNING
+    MUTE
+    RESTRICTION
+    TEMPORARY_SUSPENSION
+    PERMANENT_BAN
+}
+
+enum SanctionStatus {
+    ACTIVE
+    LIFTED
+    EXPIRED
+}
+
+enum CityType {
+    CAPITAL
+    METROPOLIS
+    CITY
+    TOWN
+    VILLAGE
+    HAMLET
+    SUBURB
+    INDUSTRIAL_ZONE
+    COMMERCIAL_ZONE
+    TOURIST_AREA
+    PORT_CITY
+    BORDER_CITY
+}

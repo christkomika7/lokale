@@ -11,7 +11,7 @@ import {
 
 import General from "#/components/dashboard/settings/general";
 import GeoManager from "#/components/dashboard/settings/geomanager";
-import CategoryManager from "#/components/dashboard/settings/categories";
+import CategoryManager from "#/components/dashboard/settings/category-manager";
 import Security from "#/components/dashboard/settings/security";
 import Emails from "#/components/dashboard/settings/email";
 import Integrations from "#/components/dashboard/settings/integration";

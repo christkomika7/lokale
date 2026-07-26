@@ -9,7 +9,7 @@ export default function Heading({
 }: HeadingProps) {
   return (
     <p
-      className={`text-[11px] font-semibold uppercase tracking-widest text-neutral-400 dark:text-neutral-200 mb-3 ${className}`}
+      className={`text-[11px] font-semibold uppercase tracking-widest text-neutral-400 dark:text-neutral-200 ${className}`}
     >
       {children}
     </p>

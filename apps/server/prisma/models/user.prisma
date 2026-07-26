@@ -38,9 +38,15 @@ model User {
     actionSubmissions ActionSubmission[]
     addonPurchases    AddonPurchase[]
 
-    activityLogs           ActivityLog[]
-    notifications          Notification[]
-    notificationPreference NotificationPreference?
+    reportsSubmitted             Report[]                @relation("ReportsSubmitted")
+    reportsResolved              Report[]                @relation("ReportsResolved")
+    sanctionsIssued              Sanction[]              @relation("SanctionsIssued")
+    sanctionsLifted              Sanction[]              @relation("SanctionsLifted")
+    suspiciousActivities         SuspiciousActivity[]    @relation("SuspiciousActivities")
+    suspiciousActivitiesReviewed SuspiciousActivity[]    @relation("SuspiciousActivitiesReviewed")
+    activityLogs                 ActivityLog[]
+    notifications                Notification[]
+    notificationPreference       NotificationPreference?
 
     createdAt                DateTime                  @default(now())
     updatedAt                DateTime                  @updatedAt

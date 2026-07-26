@@ -1,4 +1,5 @@
-import AdminHeader from "#/components/navigation/admin-header";
+import NavList from "#/components/navigation/nav-list";
+import { adminNavLinks } from "#/config/navigation";
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/(private)/admin")({
@@ -8,7 +9,7 @@ export const Route = createFileRoute("/(private)/admin")({
 function RouteComponent() {
   return (
     <div className="space-y-4">
-      <AdminHeader />
+      <NavList links={adminNavLinks} />
       <Outlet />
     </div>
   );

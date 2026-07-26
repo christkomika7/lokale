@@ -25,8 +25,14 @@ import { Route as privateUserIndexRouteImport } from './routes/(private)/user/in
 import { Route as privateAdminIndexRouteImport } from './routes/(private)/admin/index'
 import { Route as privateAdminWorkspaceRouteImport } from './routes/(private)/admin/workspace'
 import { Route as privateAdminUsersRouteImport } from './routes/(private)/admin/users'
+import { Route as privateAdminMonitoringRouteRouteImport } from './routes/(private)/admin/monitoring/route'
 import { Route as privateAdminSettingsIndexRouteImport } from './routes/(private)/admin/settings/index'
 import { Route as privateAdminMonitoringIndexRouteImport } from './routes/(private)/admin/monitoring/index'
+import { Route as privateAdminMonitoringSuspiciousActivitiesRouteImport } from './routes/(private)/admin/monitoring/suspicious-activities'
+import { Route as privateAdminMonitoringSanctionsRouteImport } from './routes/(private)/admin/monitoring/sanctions'
+import { Route as privateAdminMonitoringNotificationsRouteImport } from './routes/(private)/admin/monitoring/notifications'
+import { Route as privateAdminMonitoringLogsRouteImport } from './routes/(private)/admin/monitoring/logs'
+import { Route as privateAdminMonitoringAnnouncementsRouteImport } from './routes/(private)/admin/monitoring/announcements'
 
 const publicRouteRoute = publicRouteRouteImport.update({
   id: '/(public)',
@@ -106,6 +112,12 @@ const privateAdminUsersRoute = privateAdminUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => privateAdminRouteRoute,
 } as any)
+const privateAdminMonitoringRouteRoute =
+  privateAdminMonitoringRouteRouteImport.update({
+    id: '/monitoring',
+    path: '/monitoring',
+    getParentRoute: () => privateAdminRouteRoute,
+  } as any)
 const privateAdminSettingsIndexRoute =
   privateAdminSettingsIndexRouteImport.update({
     id: '/settings/',
@@ -114,9 +126,39 @@ const privateAdminSettingsIndexRoute =
   } as any)
 const privateAdminMonitoringIndexRoute =
   privateAdminMonitoringIndexRouteImport.update({
-    id: '/monitoring/',
-    path: '/monitoring/',
-    getParentRoute: () => privateAdminRouteRoute,
+    id: '/',
+    path: '/',
+    getParentRoute: () => privateAdminMonitoringRouteRoute,
+  } as any)
+const privateAdminMonitoringSuspiciousActivitiesRoute =
+  privateAdminMonitoringSuspiciousActivitiesRouteImport.update({
+    id: '/suspicious-activities',
+    path: '/suspicious-activities',
+    getParentRoute: () => privateAdminMonitoringRouteRoute,
+  } as any)
+const privateAdminMonitoringSanctionsRoute =
+  privateAdminMonitoringSanctionsRouteImport.update({
+    id: '/sanctions',
+    path: '/sanctions',
+    getParentRoute: () => privateAdminMonitoringRouteRoute,
+  } as any)
+const privateAdminMonitoringNotificationsRoute =
+  privateAdminMonitoringNotificationsRouteImport.update({
+    id: '/notifications',
+    path: '/notifications',
+    getParentRoute: () => privateAdminMonitoringRouteRoute,
+  } as any)
+const privateAdminMonitoringLogsRoute =
+  privateAdminMonitoringLogsRouteImport.update({
+    id: '/logs',
+    path: '/logs',
+    getParentRoute: () => privateAdminMonitoringRouteRoute,
+  } as any)
+const privateAdminMonitoringAnnouncementsRoute =
+  privateAdminMonitoringAnnouncementsRouteImport.update({
+    id: '/announcements',
+    path: '/announcements',
+    getParentRoute: () => privateAdminMonitoringRouteRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -129,11 +171,17 @@ export interface FileRoutesByFullPath {
   '/verify-otp': typeof authVerifyOtpRoute
   '/subscription': typeof publicSubscriptionRoute
   '/': typeof publicIndexRoute
+  '/admin/monitoring': typeof privateAdminMonitoringRouteRouteWithChildren
   '/admin/users': typeof privateAdminUsersRoute
   '/admin/workspace': typeof privateAdminWorkspaceRoute
   '/admin/': typeof privateAdminIndexRoute
   '/user/': typeof privateUserIndexRoute
   '/workspace/': typeof privateWorkspaceIndexRoute
+  '/admin/monitoring/announcements': typeof privateAdminMonitoringAnnouncementsRoute
+  '/admin/monitoring/logs': typeof privateAdminMonitoringLogsRoute
+  '/admin/monitoring/notifications': typeof privateAdminMonitoringNotificationsRoute
+  '/admin/monitoring/sanctions': typeof privateAdminMonitoringSanctionsRoute
+  '/admin/monitoring/suspicious-activities': typeof privateAdminMonitoringSuspiciousActivitiesRoute
   '/admin/monitoring/': typeof privateAdminMonitoringIndexRoute
   '/admin/settings/': typeof privateAdminSettingsIndexRoute
 }
@@ -151,6 +199,11 @@ export interface FileRoutesByTo {
   '/admin': typeof privateAdminIndexRoute
   '/user': typeof privateUserIndexRoute
   '/workspace': typeof privateWorkspaceIndexRoute
+  '/admin/monitoring/announcements': typeof privateAdminMonitoringAnnouncementsRoute
+  '/admin/monitoring/logs': typeof privateAdminMonitoringLogsRoute
+  '/admin/monitoring/notifications': typeof privateAdminMonitoringNotificationsRoute
+  '/admin/monitoring/sanctions': typeof privateAdminMonitoringSanctionsRoute
+  '/admin/monitoring/suspicious-activities': typeof privateAdminMonitoringSuspiciousActivitiesRoute
   '/admin/monitoring': typeof privateAdminMonitoringIndexRoute
   '/admin/settings': typeof privateAdminSettingsIndexRoute
 }
@@ -167,11 +220,17 @@ export interface FileRoutesById {
   '/(auth)/verify-otp': typeof authVerifyOtpRoute
   '/(public)/subscription': typeof publicSubscriptionRoute
   '/(public)/': typeof publicIndexRoute
+  '/(private)/admin/monitoring': typeof privateAdminMonitoringRouteRouteWithChildren
   '/(private)/admin/users': typeof privateAdminUsersRoute
   '/(private)/admin/workspace': typeof privateAdminWorkspaceRoute
   '/(private)/admin/': typeof privateAdminIndexRoute
   '/(private)/user/': typeof privateUserIndexRoute
   '/(private)/workspace/': typeof privateWorkspaceIndexRoute
+  '/(private)/admin/monitoring/announcements': typeof privateAdminMonitoringAnnouncementsRoute
+  '/(private)/admin/monitoring/logs': typeof privateAdminMonitoringLogsRoute
+  '/(private)/admin/monitoring/notifications': typeof privateAdminMonitoringNotificationsRoute
+  '/(private)/admin/monitoring/sanctions': typeof privateAdminMonitoringSanctionsRoute
+  '/(private)/admin/monitoring/suspicious-activities': typeof privateAdminMonitoringSuspiciousActivitiesRoute
   '/(private)/admin/monitoring/': typeof privateAdminMonitoringIndexRoute
   '/(private)/admin/settings/': typeof privateAdminSettingsIndexRoute
 }
@@ -187,11 +246,17 @@ export interface FileRouteTypes {
     | '/verify-otp'
     | '/subscription'
     | '/'
+    | '/admin/monitoring'
     | '/admin/users'
     | '/admin/workspace'
     | '/admin/'
     | '/user/'
     | '/workspace/'
+    | '/admin/monitoring/announcements'
+    | '/admin/monitoring/logs'
+    | '/admin/monitoring/notifications'
+    | '/admin/monitoring/sanctions'
+    | '/admin/monitoring/suspicious-activities'
     | '/admin/monitoring/'
     | '/admin/settings/'
   fileRoutesByTo: FileRoutesByTo
@@ -209,6 +274,11 @@ export interface FileRouteTypes {
     | '/admin'
     | '/user'
     | '/workspace'
+    | '/admin/monitoring/announcements'
+    | '/admin/monitoring/logs'
+    | '/admin/monitoring/notifications'
+    | '/admin/monitoring/sanctions'
+    | '/admin/monitoring/suspicious-activities'
     | '/admin/monitoring'
     | '/admin/settings'
   id:
@@ -224,11 +294,17 @@ export interface FileRouteTypes {
     | '/(auth)/verify-otp'
     | '/(public)/subscription'
     | '/(public)/'
+    | '/(private)/admin/monitoring'
     | '/(private)/admin/users'
     | '/(private)/admin/workspace'
     | '/(private)/admin/'
     | '/(private)/user/'
     | '/(private)/workspace/'
+    | '/(private)/admin/monitoring/announcements'
+    | '/(private)/admin/monitoring/logs'
+    | '/(private)/admin/monitoring/notifications'
+    | '/(private)/admin/monitoring/sanctions'
+    | '/(private)/admin/monitoring/suspicious-activities'
     | '/(private)/admin/monitoring/'
     | '/(private)/admin/settings/'
   fileRoutesById: FileRoutesById
@@ -358,6 +434,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof privateAdminUsersRouteImport
       parentRoute: typeof privateAdminRouteRoute
     }
+    '/(private)/admin/monitoring': {
+      id: '/(private)/admin/monitoring'
+      path: '/monitoring'
+      fullPath: '/admin/monitoring'
+      preLoaderRoute: typeof privateAdminMonitoringRouteRouteImport
+      parentRoute: typeof privateAdminRouteRoute
+    }
     '/(private)/admin/settings/': {
       id: '/(private)/admin/settings/'
       path: '/settings'
@@ -367,27 +450,90 @@ declare module '@tanstack/react-router' {
     }
     '/(private)/admin/monitoring/': {
       id: '/(private)/admin/monitoring/'
-      path: '/monitoring'
+      path: '/'
       fullPath: '/admin/monitoring/'
       preLoaderRoute: typeof privateAdminMonitoringIndexRouteImport
-      parentRoute: typeof privateAdminRouteRoute
+      parentRoute: typeof privateAdminMonitoringRouteRoute
+    }
+    '/(private)/admin/monitoring/suspicious-activities': {
+      id: '/(private)/admin/monitoring/suspicious-activities'
+      path: '/suspicious-activities'
+      fullPath: '/admin/monitoring/suspicious-activities'
+      preLoaderRoute: typeof privateAdminMonitoringSuspiciousActivitiesRouteImport
+      parentRoute: typeof privateAdminMonitoringRouteRoute
+    }
+    '/(private)/admin/monitoring/sanctions': {
+      id: '/(private)/admin/monitoring/sanctions'
+      path: '/sanctions'
+      fullPath: '/admin/monitoring/sanctions'
+      preLoaderRoute: typeof privateAdminMonitoringSanctionsRouteImport
+      parentRoute: typeof privateAdminMonitoringRouteRoute
+    }
+    '/(private)/admin/monitoring/notifications': {
+      id: '/(private)/admin/monitoring/notifications'
+      path: '/notifications'
+      fullPath: '/admin/monitoring/notifications'
+      preLoaderRoute: typeof privateAdminMonitoringNotificationsRouteImport
+      parentRoute: typeof privateAdminMonitoringRouteRoute
+    }
+    '/(private)/admin/monitoring/logs': {
+      id: '/(private)/admin/monitoring/logs'
+      path: '/logs'
+      fullPath: '/admin/monitoring/logs'
+      preLoaderRoute: typeof privateAdminMonitoringLogsRouteImport
+      parentRoute: typeof privateAdminMonitoringRouteRoute
+    }
+    '/(private)/admin/monitoring/announcements': {
+      id: '/(private)/admin/monitoring/announcements'
+      path: '/announcements'
+      fullPath: '/admin/monitoring/announcements'
+      preLoaderRoute: typeof privateAdminMonitoringAnnouncementsRouteImport
+      parentRoute: typeof privateAdminMonitoringRouteRoute
     }
   }
 }
 
+interface privateAdminMonitoringRouteRouteChildren {
+  privateAdminMonitoringAnnouncementsRoute: typeof privateAdminMonitoringAnnouncementsRoute
+  privateAdminMonitoringLogsRoute: typeof privateAdminMonitoringLogsRoute
+  privateAdminMonitoringNotificationsRoute: typeof privateAdminMonitoringNotificationsRoute
+  privateAdminMonitoringSanctionsRoute: typeof privateAdminMonitoringSanctionsRoute
+  privateAdminMonitoringSuspiciousActivitiesRoute: typeof privateAdminMonitoringSuspiciousActivitiesRoute
+  privateAdminMonitoringIndexRoute: typeof privateAdminMonitoringIndexRoute
+}
+
+const privateAdminMonitoringRouteRouteChildren: privateAdminMonitoringRouteRouteChildren =
+  {
+    privateAdminMonitoringAnnouncementsRoute:
+      privateAdminMonitoringAnnouncementsRoute,
+    privateAdminMonitoringLogsRoute: privateAdminMonitoringLogsRoute,
+    privateAdminMonitoringNotificationsRoute:
+      privateAdminMonitoringNotificationsRoute,
+    privateAdminMonitoringSanctionsRoute: privateAdminMonitoringSanctionsRoute,
+    privateAdminMonitoringSuspiciousActivitiesRoute:
+      privateAdminMonitoringSuspiciousActivitiesRoute,
+    privateAdminMonitoringIndexRoute: privateAdminMonitoringIndexRoute,
+  }
+
+const privateAdminMonitoringRouteRouteWithChildren =
+  privateAdminMonitoringRouteRoute._addFileChildren(
+    privateAdminMonitoringRouteRouteChildren,
+  )
+
 interface privateAdminRouteRouteChildren {
+  privateAdminMonitoringRouteRoute: typeof privateAdminMonitoringRouteRouteWithChildren
   privateAdminUsersRoute: typeof privateAdminUsersRoute
   privateAdminWorkspaceRoute: typeof privateAdminWorkspaceRoute
   privateAdminIndexRoute: typeof privateAdminIndexRoute
-  privateAdminMonitoringIndexRoute: typeof privateAdminMonitoringIndexRoute
   privateAdminSettingsIndexRoute: typeof privateAdminSettingsIndexRoute
 }
 
 const privateAdminRouteRouteChildren: privateAdminRouteRouteChildren = {
+  privateAdminMonitoringRouteRoute:
+    privateAdminMonitoringRouteRouteWithChildren,
   privateAdminUsersRoute: privateAdminUsersRoute,
   privateAdminWorkspaceRoute: privateAdminWorkspaceRoute,
   privateAdminIndexRoute: privateAdminIndexRoute,
-  privateAdminMonitoringIndexRoute: privateAdminMonitoringIndexRoute,
   privateAdminSettingsIndexRoute: privateAdminSettingsIndexRoute,
 }
 

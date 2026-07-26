@@ -43,6 +43,7 @@ import { api } from "./lib/api";
 import AlertMessage from "#/components/alert/alert-message";
 import Required from "#/components/input/required";
 import z from "zod";
+import PanelIntro from "#/components/sheet/panel-intro";
 
 interface UserFormProps {
   mode: "create" | "edit";
@@ -133,33 +134,16 @@ export default function UserForm({ mode, user, onClose }: UserFormProps) {
 
   return (
     <div className="flex flex-col h-full overflow-y-auto">
-      {/* Header */}
-      <div className="px-5 pt-5 pb-4 flex items-center justify-between gap-3 shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="size-9 rounded-sm bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center">
-            <UserPlus className="size-4 text-amber-500" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-neutral-800 dark:text-neutral-100">
-              {mode === "create"
-                ? "Nouvel utilisateur"
-                : "Modifier l'utilisateur"}
-            </p>
-            <p className="text-[11px] text-neutral-500 dark:text-neutral-300">
-              {mode === "create" ? "Remplissez les informations" : user?.name}
-            </p>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={onClose}
-          className="size-7 rounded-sm flex items-center justify-center text-neutral-400 hover:bg-slate-100 dark:hover:bg-neutral-800 transition-colors"
-        >
-          <X className="size-4" />
-        </button>
-      </div>
-
-      <Separator className="dark:bg-neutral-800 shrink-0" />
+      <PanelIntro
+        icon={UserPlus}
+        title={
+          mode === "create" ? "Nouvel utilisateur" : "Modifier l'utilisateur"
+        }
+        subtitle={
+          mode === "create" ? "Remplissez les informations" : user?.name
+        }
+        onClose={onClose}
+      />
 
       <form
         onSubmit={(e) => {

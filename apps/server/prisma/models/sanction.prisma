@@ -1,0 +1,37 @@
+model Sanction {
+    id String @id @default(cuid())
+
+    targetType  EntityType // USER ou BUSINESS en pratique
+    targetId    String
+    targetLabel String?
+
+    type        SanctionType
+    reason      String
+    description String?
+
+    status SanctionStatus @default(ACTIVE)
+
+    issuedById  String?
+    issuedBy    User?   @relation("SanctionsIssued", fields: [issuedById], references: [id], onDelete: SetNull)
+    isAutomatic Boolean @default(false) // déclenchée par une règle système, pas un admin
+
+    startAt DateTime  @default(now())
+    endAt   DateTime? // null = permanent
+
+    liftedById String?
+    liftedBy   User?     @relation("SanctionsLifted", fields: [liftedById], references: [id], onDelete: SetNull)
+    liftedAt   DateTime?
+    liftReason String?
+
+    reports              Report[]
+    suspiciousActivities SuspiciousActivity[]
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@index([targetType, targetId])
+    @@index([status])
+    @@index([type])
+    @@index([endAt])
+    @@map("sanction")
+}

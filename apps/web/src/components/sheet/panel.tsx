@@ -22,7 +22,7 @@ export default function Panel({
           isDialogOpen && "opacity-0 pointer-events-none",
         )}
         className={cn(
-          "w-[340px] p-0 border-l border-input dark:border-neutral-800 bg-white dark:bg-neutral-900 flex flex-col [&>button]:hidden transition-all duration-200",
+          "w-85 p-0 border-l border-input dark:border-neutral-800 bg-white dark:bg-neutral-900 flex flex-col [&>button]:hidden transition-all duration-200",
           isDialogOpen && "opacity-0 pointer-events-none translate-x-2",
         )}
       >
