@@ -6,10 +6,35 @@ import type {
   SubCategory,
   SubCategorySchemaType,
 } from "@lokale/types/category";
+import type { PaginatedResult } from "@lokale/types/pagination";
+
+interface GetCategoriesParams {
+  page?: number;
+  perPage?: number;
+  search?: string;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+  [key: string]: string | number | boolean | undefined | null;
+}
+
+interface GetSubCategoriesParams {
+  page?: number;
+  perPage?: number;
+  search?: string;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+  categoryID?: string;
+  [key: string]: string | number | boolean | undefined | null;
+}
 
 export const categoryApi = {
-  getCategories: () =>
-    useApiQuery<Category[]>(["categories"], "/admin/categories"),
+  // ─── Categories ───────────────────────────────────────────────────────────
+  getCategories: (params?: GetCategoriesParams) =>
+    useApiQuery<PaginatedResult<Category>>(
+      ["categories", params],
+      "/admin/categories",
+      { params },
+    ),
 
   getCategory: (id: string) =>
     useApiQuery<Category>(["categories", id], `/admin/categories/${id}`),
@@ -26,7 +51,7 @@ export const categoryApi = {
       `/admin/categories/${id}`,
       {
         method: "patch",
-        invalidate: ["categories"],
+        invalidate: ["categories", "sub-categories"],
         successMessage: "Catégorie modifiée",
       },
     ),
@@ -34,37 +59,48 @@ export const categoryApi = {
   deleteCategory: (id: string) =>
     useApiMutation<{ id: string }, void>(`/admin/categories/${id}`, {
       method: "delete",
-      invalidate: ["categories"],
+      invalidate: ["categories", "sub-categories"],
       successMessage: "Catégorie supprimée",
     }),
 
-  createSubCategory: (categoryId: string) =>
+  // ─── SubCategories (standalone) ───────────────────────────────────────────
+  getSubCategories: (params?: GetSubCategoriesParams) =>
+    useApiQuery<PaginatedResult<SubCategory>>(
+      ["sub-categories", params],
+      "/admin/sub-categories",
+      { params },
+    ),
+
+  getSubCategory: (id: string) =>
+    useApiQuery<SubCategory>(
+      ["sub-categories", id],
+      `/admin/sub-categories/${id}`,
+    ),
+
+  createSubCategory: () =>
     useApiMutation<SubCategory, SubCategorySchemaType>(
-      `/admin/categories/${categoryId}/sub-categories`,
+      "/admin/sub-categories",
       {
         method: "post",
-        invalidate: ["categories"],
+        invalidate: ["sub-categories", "categories"],
         successMessage: "Sous-catégorie ajoutée",
       },
     ),
 
-  updateSubCategory: (categoryId: string, subCategoryId: string) =>
+  updateSubCategory: (id: string) =>
     useApiMutation<SubCategory, Partial<SubCategorySchemaType>>(
-      `/admin/categories/${categoryId}/sub-categories/${subCategoryId}`,
+      `/admin/sub-categories/${id}`,
       {
         method: "patch",
-        invalidate: ["categories"],
+        invalidate: ["sub-categories", "categories"],
         successMessage: "Sous-catégorie modifiée",
       },
     ),
 
-  deleteSubCategory: (categoryId: string, subCategoryId: string) =>
-    useApiMutation<{ id: string }, void>(
-      `/admin/categories/${categoryId}/sub-categories/${subCategoryId}`,
-      {
-        method: "delete",
-        invalidate: ["categories"],
-        successMessage: "Sous-catégorie supprimée",
-      },
-    ),
+  deleteSubCategory: (id: string) =>
+    useApiMutation<{ id: string }, void>(`/admin/sub-categories/${id}`, {
+      method: "delete",
+      invalidate: ["sub-categories", "categories"],
+      successMessage: "Sous-catégorie supprimée",
+    }),
 };

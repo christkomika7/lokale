@@ -1,69 +1,108 @@
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
+import { Plus, Search } from "lucide-react";
 import {
-  ChevronDown,
-  ChevronRight,
-  Plus,
-  Pencil,
-  Search,
-  Loader2,
-} from "lucide-react";
+  createColumnHelper,
+  getCoreRowModel,
+  useReactTable,
+  type SortingState,
+} from "@tanstack/react-table";
 import { Button } from "#/components/ui/button";
-import { Badge } from "#/components/ui/badge";
+import { useDebouncedValue } from "#/hook/use-debounced-value";
 import { CountryDetail } from "./country/country-detail";
+import { CountryForm, type CountryFormValues } from "./country/country-form";
+import { PER_PAGE } from "@lokale/config/pagination";
+import { DEBOUND } from "@lokale/config/input";
+import { api } from "./lib/api";
 
 import type { PanelMode } from "@lokale/types/panel";
-import { CountryForm, type CountryFormValues } from "./country/country-form";
-import type { Country, Currency } from "@lokale/types/localisation";
+import type { Country } from "@lokale/types/localisation";
 
 import Heading from "#/components/typography/heading";
 import PanelContainer from "#/components/sheet/panel-container";
-import CityManager from "./city-manager";
 import InputIcon from "#/components/input/input-icon";
 import Text from "#/components/typography/Text";
-import { api } from "./lib/api";
+import CountriesTable from "#/components/table/localisation/country/country";
+import Pagination from "#/components/pagination/pagination";
 
-interface CountryManagerProps {
-  countries: Country[];
-  currencies: Currency[];
-  isLoading?: boolean;
-}
+const columnHelper = createColumnHelper<Country>();
 
-// TODO: revoir l'affichage des pays (Utiliser tanstack table avec son systeme de filtres)
-
-export default function CountryManager({
-  countries,
-  currencies,
-  isLoading,
-}: CountryManagerProps) {
+export default function CountryManager() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [mode, setMode] = useState<PanelMode>("detail");
   const [open, setOpen] = useState(false);
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
-  const [globalFilter, setGlobalFilter] = useState("");
+
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, DEBOUND);
+  const [page, setPage] = useState(1);
+  const [sorting, setSorting] = useState<SortingState>([
+    { id: "name", desc: false },
+  ]);
+
+  const sortField = sorting[0]?.id ?? "name";
+  const sortOrder = sorting[0]?.desc ? "desc" : "asc";
+
+  const { data, isLoading, isFetching } = api.getCountries({
+    page,
+    perPage: PER_PAGE,
+    search: debouncedSearch,
+    sortBy: sortField,
+    sortOrder,
+  });
+
+  // Liste complète des devises pour alimenter le select du formulaire —
+  // perPage large volontairement (pas une vraie pagination ici, juste
+  // une liste à choix).
+  const { data: currenciesData, isLoading: currenciesLoading } =
+    api.getCurrencies({ perPage: 200, sortBy: "name", sortOrder: "asc" });
+  const currencies = currenciesData?.items ?? [];
+
+  const countries = data?.items ?? [];
+  const meta = data?.meta;
 
   const createCountry = api.createCountry();
   const updateCountry = api.updateCountry(selectedId ?? "");
   const deleteCountry = api.deleteCountry(selectedId ?? "");
 
-  const filtered = useMemo(
-    () =>
-      countries.filter(
-        (p) =>
-          p.name.toLowerCase().includes(globalFilter.toLowerCase()) ||
-          p.code.toLowerCase().includes(globalFilter.toLowerCase()),
-      ),
-    [countries, globalFilter],
-  );
-
   const selected = countries.find((c) => c.id === selectedId) ?? null;
 
-  function toggleExpand(id: string) {
-    setExpandedIds((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  }
+  const columns = useMemo(
+    () => [
+      columnHelper.accessor("name", {
+        id: "name",
+        header: "Pays",
+        enableSorting: true,
+      }),
+      columnHelper.accessor("code", {
+        id: "code",
+        header: "Code",
+        enableSorting: true,
+      }),
+      columnHelper.accessor("continent", {
+        id: "continent",
+        header: "Continent",
+        enableSorting: true,
+      }),
+      columnHelper.accessor("phoneCode", {
+        id: "phoneCode",
+        header: "Indicatif",
+        enableSorting: false,
+      }),
+    ],
+    [],
+  );
+
+  const table = useReactTable({
+    data: countries,
+    columns,
+    manualPagination: true,
+    manualSorting: true,
+    manualFiltering: true,
+    state: { sorting },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+  });
+
+  const rows = table.getRowModel().rows;
 
   function openDetail(country: Country) {
     setSelectedId(country.id);
@@ -93,10 +132,15 @@ export default function CountryManager({
     deleteCountry.mutate(undefined, { onSuccess: closePanel });
   }
 
+  function handleSearchChange(value: string) {
+    setSearch(value);
+    setPage(1);
+  }
+
   return (
     <div className="border border-input bg-white/80 dark:bg-neutral-900/30 rounded-lg overflow-hidden">
       <div className="flex items-center justify-between px-3 py-2.5 border-b border-input dark:border-neutral-700">
-        <Heading className="text-2xl mb-0!">Pays &amp; Villes</Heading>
+        <Heading className="text-2xl mb-0!">Pays</Heading>
         <Button
           variant="amber"
           size="sm"
@@ -112,76 +156,33 @@ export default function CountryManager({
           type="search"
           icon={Search}
           placeholder="Rechercher un pays…"
-          value={globalFilter}
+          value={search}
           position="left"
-          onChange={(e) => setGlobalFilter(e.target.value)}
+          onChange={(e) => handleSearchChange(e.target.value)}
           className="max-w-55 text-[12px] rounded-sm!"
         />
         <Text className="ml-auto" size="xxs">
-          {filtered.length} pays
+          {meta?.total ?? 0} pays
         </Text>
       </div>
 
-      {isLoading ? (
-        <div className="flex items-center justify-center py-12 text-neutral-400">
-          <Loader2 className="size-5 animate-spin" />
-        </div>
-      ) : filtered.length === 0 ? (
-        <div className="py-10 text-center text-[13px] text-neutral-400">
-          Aucun pays trouvé.
-        </div>
-      ) : (
-        <div className="divide-y divide-neutral-50 dark:divide-neutral-800/60">
-          {filtered.map((p) => (
-            <div key={p.id}>
-              <div
-                className={`flex items-center gap-3 p-3 cursor-pointer hover:bg-neutral-50/60 dark:hover:bg-neutral-800/20 transition-colors ${
-                  expandedIds.has(p.id)
-                    ? "bg-neutral-50/40 dark:bg-neutral-800/10"
-                    : ""
-                }`}
-                onClick={() => toggleExpand(p.id)}
-              >
-                {expandedIds.has(p.id) ? (
-                  <ChevronDown className="size-3.5 text-neutral-400 shrink-0" />
-                ) : (
-                  <ChevronRight className="size-3.5 text-neutral-400 shrink-0" />
-                )}
+      <CountriesTable
+        rows={rows}
+        isLoading={isLoading}
+        isFetching={isFetching}
+        selectedId={selectedId}
+        onOpen={openDetail}
+        onClose={closePanel}
+        panelMode={mode}
+      />
 
-                <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-medium text-neutral-700 dark:text-neutral-200 truncate">
-                    {p.name}
-                  </p>
-                  <p className="text-[11px] text-neutral-400 dark:text-neutral-500">
-                    {p.code} · {p.continent || "—"} · {p.phoneCode || "—"} ·{" "}
-                    {p.currency.code}
-                  </p>
-                </div>
-
-                <Badge className="bg-neutral-100 text-neutral-500 dark:bg-neutral-700/50 dark:text-neutral-400 shrink-0">
-                  {p.cities.length} ville{p.cities.length !== 1 ? "s" : ""}
-                </Badge>
-
-                <div
-                  className="flex items-center gap-1 shrink-0"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-7 rounded-md"
-                    onClick={() => openDetail(p)}
-                  >
-                    <Pencil className="size-3.5" />
-                  </Button>
-                </div>
-              </div>
-
-              {expandedIds.has(p.id) && (
-                <CityManager countryId={p.id} cities={p.cities} />
-              )}
-            </div>
-          ))}
+      {meta && meta.totalPages > 1 && (
+        <div className="flex justify-end  p-3 border-t border-input dark:border-neutral-700">
+          <Pagination
+            page={meta.page}
+            totalPages={meta.totalPages}
+            onPageChange={setPage}
+          />
         </div>
       )}
 
@@ -208,7 +209,7 @@ export default function CountryManager({
               updateCountry.mutate(v, { onSuccess: actions.toDetail });
             }}
             onCancel={actions.toDetail}
-            isSubmitting={updateCountry.isPending}
+            isSubmitting={updateCountry.isPending || currenciesLoading}
           />
         )}
         create={(actions) => (
@@ -218,7 +219,7 @@ export default function CountryManager({
               createCountry.mutate(v, { onSuccess: actions.close });
             }}
             onCancel={actions.close}
-            isSubmitting={createCountry.isPending}
+            isSubmitting={createCountry.isPending || currenciesLoading}
           />
         )}
       />

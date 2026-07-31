@@ -1,6 +1,3 @@
-import { LayoutList } from "lucide-react";
-import Container from "@/components/layout/container";
-import { cn } from "#/lib/utils";
 import TableLoader from "../loader/table-loader";
 
 export interface ColumnDef<T> {
@@ -11,9 +8,9 @@ export interface ColumnDef<T> {
 }
 
 export interface RowConfig<T> {
+  getKey: (row: T) => string;
   isSelected?: (row: T) => boolean;
   onClick?: (row: T) => void;
-  getKey: (row: T) => string;
 }
 
 interface DataTableProps<T> {
@@ -21,118 +18,91 @@ interface DataTableProps<T> {
   columns: ColumnDef<T>[];
   rowConfig: RowConfig<T>;
   emptyLabel?: string;
-  className?: string;
   isLoading?: boolean;
-}
-
-function SkeletonRow({
-  columns,
-  gridTemplate,
-  rowIndex,
-}: {
-  columns: ColumnDef<any>[];
-  gridTemplate: string;
-  rowIndex: number;
-}) {
-  return (
-    <div className="w-full border-l-2 border-transparent">
-      <Container>
-        <div
-          className="px-6 py-2 grid gap-4 items-center"
-          style={{ gridTemplateColumns: gridTemplate }}
-        >
-          {columns.map((col, colIndex) => (
-            <TableLoader
-              colIndex={colIndex}
-              rowIndex={rowIndex}
-              key={col.key}
-            />
-          ))}
-        </div>
-      </Container>
-    </div>
-  );
+  isFetching?: boolean;
+  skeletonRowCount?: number;
 }
 
 export default function DataTable<T>({
   rows,
   columns,
   rowConfig,
-  emptyLabel = "Aucun résultat trouvé",
-  className,
+  emptyLabel = "Aucune donnée trouvée",
   isLoading,
+  isFetching,
+  skeletonRowCount = 8,
 }: DataTableProps<T>) {
-  const gridTemplate = columns.map((c) => c.size ?? "1fr").join(" ");
+  const gridTemplateColumns = columns.map((c) => c.size ?? "1fr").join(" ");
+
+  const showFullSkeleton = isLoading && rows.length === 0;
+  const showRefetchOverlay = isFetching && !isLoading && rows.length > 0;
 
   return (
-    <div className={cn("flex flex-col", className)}>
-      <div className="border-b border-input dark:border-neutral-800">
-        <Container>
-          <div
-            className="py-2.5 grid gap-4 shrink-0"
-            style={{ gridTemplateColumns: gridTemplate }}
+    <div className="w-full">
+      <div
+        className="grid min-h-12  items-center px-3 py-2 border-b border-input dark:border-neutral-700 bg-neutral-50/60 dark:bg-neutral-800/20"
+        style={{ gridTemplateColumns }}
+      >
+        {columns.map((col) => (
+          <span
+            key={col.key}
+            className="text-[11px] font-medium uppercase tracking-wide text-neutral-400"
           >
-            {columns.map((col) => (
-              <p
-                key={col.key}
-                className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400 dark:text-neutral-500"
-              >
-                {col.label}
-              </p>
-            ))}
-          </div>
-        </Container>
+            {col.label}
+          </span>
+        ))}
       </div>
 
-      <div className="flex-1 overflow-y-auto divide-y divide-slate-50 dark:divide-neutral-800/60">
-        {isLoading ? (
-          Array.from({ length: 6 }).map((_, i) => (
-            <SkeletonRow
-              key={i}
-              rowIndex={i}
-              columns={columns}
-              gridTemplate={gridTemplate}
-            />
+      <div className="relative divide-y divide-neutral-50 dark:divide-neutral-800/60">
+        {showFullSkeleton ? (
+          Array.from({ length: skeletonRowCount }).map((_, rowIndex) => (
+            <div
+              key={`skeleton-${rowIndex}`}
+              className="grid items-center gap-3 px-3 py-3"
+              style={{ gridTemplateColumns }}
+            >
+              {columns.map((_, colIndex) => (
+                <TableLoader
+                  key={colIndex}
+                  rowIndex={rowIndex}
+                  colIndex={colIndex}
+                />
+              ))}
+            </div>
           ))
         ) : rows.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-64 gap-3 text-neutral-400">
-            <LayoutList className="size-10 opacity-30" />
-            <p className="text-sm">{emptyLabel}</p>
+          <div className="py-10 text-center text-[13px] text-neutral-400">
+            {emptyLabel}
           </div>
         ) : (
-          rows.map((row, index) => {
-            const isSelected = rowConfig.isSelected?.(row) ?? false;
-            const isOdd = index % 2 !== 0;
-
-            return (
+          <>
+            {showRefetchOverlay && (
               <div
-                key={rowConfig.getKey(row)}
-                onClick={() => rowConfig.onClick?.(row)}
-                className={cn(
-                  "w-full border-l-2 transition-colors",
-                  rowConfig.onClick && "cursor-pointer",
-                  isSelected
-                    ? "bg-amber-50/60 dark:bg-amber-500/5 border-none"
-                    : isOdd
-                      ? "bg-neutral-50/40 dark:bg-neutral-700/30 border-transparent hover:bg-neutral-50/70 dark:hover:bg-neutral-700/50"
-                      : "bg-white dark:bg-transparent border-transparent hover:bg-neutral-50/70 dark:hover:bg-neutral-700/50",
-                )}
-              >
-                <Container>
-                  <div
-                    className="py-3.5 grid gap-4 items-center"
-                    style={{ gridTemplateColumns: gridTemplate }}
-                  >
-                    {columns.map((col) => (
-                      <div key={col.key} className="min-w-0">
-                        {col.render(row)}
-                      </div>
-                    ))}
-                  </div>
-                </Container>
-              </div>
-            );
-          })
+                aria-hidden
+                className="absolute inset-0 z-10 bg-white/50 dark:bg-neutral-900/40 backdrop-blur-[1px] pointer-events-none transition-opacity duration-150"
+              />
+            )}
+            {rows.map((row) => {
+              const key = rowConfig.getKey(row);
+              const selected = rowConfig.isSelected?.(row) ?? false;
+              return (
+                <div
+                  key={key}
+                  onClick={() => rowConfig.onClick?.(row)}
+                  className={`grid items-center gap-3 px-3 py-3 cursor-pointer transition-colors hover:bg-neutral-50/60 dark:hover:bg-neutral-800/20 ${
+                    selected ? "bg-amber-50/60 dark:bg-amber-500/10" : ""
+                  }`}
+                  style={{ gridTemplateColumns }}
+                >
+                  {columns.map((col) => (
+                    <div key={col.key} className="min-w-0 text-[12px]">
+                      {col.render(row)}
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
+          </>
         )}
       </div>
     </div>

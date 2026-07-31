@@ -1,26 +1,26 @@
+import { useForm } from "@tanstack/react-form";
+import { Hash, Layers, Loader2, MapPin, Save, Users, X } from "lucide-react";
+
+import Input from "#/components/input/input";
 import {
   InputErrorContainer,
   InputErrorMessage,
 } from "#/components/message/input-error-message";
 import { Button } from "#/components/ui/button";
-import { CITY_TYPE_LABELS, CITY_TYPES } from "@lokale/config/localisation";
-import { useForm } from "@tanstack/react-form";
-import { Building2, Goal, Map, Save, Tag, Users, X } from "lucide-react";
 import { Label } from "#/components/ui/label";
-
-import type { City } from "@lokale/types/localisation";
-import type { CityType } from "@lokale/lib/validator/localisation";
-
-import Input from "#/components/input/input";
-import Loader from "#/components/ui/loader";
-import Heading from "#/components/typography/heading";
-import PanelIntro from "#/components/sheet/panel-intro";
-import Required from "#/components/input/required";
 import SelectField from "#/components/select/select-field";
+import PanelIntro from "#/components/sheet/panel-intro";
+import Heading from "#/components/typography/heading";
+import Required from "#/components/input/required";
+import { CITY_TYPE_LABELS, CITY_TYPES } from "@lokale/config/localisation";
+import { api } from "../lib/api";
+
+import type { City, CitySchemaType } from "@lokale/types/localisation";
+import type { CityType } from "@lokale/lib/validator/localisation";
 
 interface CityFormProps {
   defaultValues?: City;
-  onSubmit: (values: Omit<City, "id" | "countryId">) => void;
+  onSubmit: (values: CitySchemaType) => void;
   onCancel: () => void;
   isSubmitting?: boolean;
 }
@@ -31,19 +31,28 @@ export function CityForm({
   onCancel,
   isSubmitting,
 }: CityFormProps) {
+  // Liste des pays pour le select — perPage volontairement large pour couvrir
+  // le cas d'usage "choisir dans une liste complète", pas une pagination réelle ici.
+  const { data: countriesData, isLoading: countriesLoading } = api.getCountries(
+    { perPage: 200, sortBy: "name", sortOrder: "asc" },
+  );
+  const countries = countriesData?.items ?? [];
+
   const form = useForm({
     defaultValues: {
       name: defaultValues?.name ?? "",
       region: defaultValues?.region ?? "",
       type: defaultValues?.type ?? ("CITY" as CityType),
       population: defaultValues?.population ?? ("" as unknown as number),
+      countryId: defaultValues?.countryId ?? "",
     },
     onSubmit: ({ value }) => {
       onSubmit({
         name: value.name.trim(),
-        region: value.region.trim(),
+        region: value.region.trim() || "",
         type: value.type,
         population: value.population ? Number(value.population) : undefined,
+        countryId: value.countryId,
       });
     },
   });
@@ -51,7 +60,7 @@ export function CityForm({
   return (
     <div className="flex flex-col h-full overflow-y-auto">
       <PanelIntro
-        icon={Goal}
+        icon={MapPin}
         title={defaultValues ? "Modifier la ville" : "Nouvelle ville"}
         subtitle={
           defaultValues
@@ -87,7 +96,7 @@ export function CityForm({
               <Input
                 id={field.name}
                 name={field.name}
-                icon={Building2}
+                icon={MapPin}
                 hasError={
                   field.state.meta.isTouched && !field.state.meta.isValid
                 }
@@ -96,8 +105,50 @@ export function CityForm({
                 onBlur={field.handleBlur}
                 placeholder="ex: Brazzaville"
                 position="left"
-                autoComplete="city"
                 className="min-w-auto w-full rounded-lg"
+              />
+              <InputErrorContainer>
+                {field.state.meta.isTouched &&
+                  field.state.meta.errors.map((error, i) => (
+                    <InputErrorMessage key={i} message={error} />
+                  ))}
+              </InputErrorContainer>
+            </div>
+          )}
+        </form.Field>
+
+        <form.Field
+          name="countryId"
+          validators={{
+            onChange: ({ value }) => (!value ? "Pays obligatoire" : undefined),
+          }}
+        >
+          {(field) => (
+            <div>
+              <Label htmlFor={field.name}>
+                Pays <Required />
+              </Label>
+              <SelectField
+                id={field.name}
+                name={field.name}
+                value={field.state.value}
+                icon={MapPin}
+                iconPosition="left"
+                onValueChange={(v: string | null) =>
+                  field.handleChange(v as string)
+                }
+                options={countries.map((c) => ({
+                  value: c.id,
+                  label: c.name,
+                }))}
+                emptyMessage={
+                  countriesLoading ? "Chargement…" : "Aucun pays disponible"
+                }
+                hasError={
+                  field.state.meta.isTouched && !field.state.meta.isValid
+                }
+                placeholder="Choisir un pays"
+                disabled={isSubmitting || countriesLoading}
               />
               <InputErrorContainer>
                 {field.state.meta.isTouched &&
@@ -113,24 +164,17 @@ export function CityForm({
           <form.Field name="region">
             {(field) => (
               <div>
-                <Label className="mb-2" htmlFor={field.name}>
-                  Région
-                </Label>
+                <Label htmlFor={field.name}>Région</Label>
                 <Input
                   id={field.name}
                   name={field.name}
-                  icon={Map}
-                  hasError={
-                    field.state.meta.isTouched && !field.state.meta.isValid
-                  }
+                  icon={Hash}
                   value={field.state.value}
                   onChange={(e) => field.handleChange(e.target.value)}
-                  onBlur={field.handleBlur}
                   placeholder="ex: Pool"
                   position="left"
-                  required={false}
-                  autoComplete="region"
                   className="min-w-auto w-full rounded-lg"
+                  required={false}
                 />
               </div>
             )}
@@ -139,24 +183,20 @@ export function CityForm({
           <form.Field name="population">
             {(field) => (
               <div>
-                <Label className="mb-2" htmlFor={field.name}>
-                  Population
-                </Label>
+                <Label htmlFor={field.name}>Population</Label>
                 <Input
                   id={field.name}
                   name={field.name}
+                  type="number"
                   icon={Users}
-                  hasError={
-                    field.state.meta.isTouched && !field.state.meta.isValid
+                  value={field.state.value as unknown as string}
+                  onChange={(e) =>
+                    field.handleChange(e.target.value as unknown as number)
                   }
-                  value={field.state.value?.toString()}
-                  onChange={(e) => field.handleChange(Number(e.target.value))}
-                  onBlur={field.handleBlur}
-                  placeholder="ex: 2 000 000"
+                  placeholder="ex: 2000000"
                   position="left"
-                  autoComplete="population"
-                  required={false}
                   className="min-w-auto w-full rounded-lg"
+                  required={false}
                 />
               </div>
             )}
@@ -166,14 +206,12 @@ export function CityForm({
         <form.Field name="type">
           {(field) => (
             <div>
-              <Label className="mb-2" htmlFor={field.name}>
-                Type
-              </Label>
+              <Label htmlFor={field.name}>Type</Label>
               <SelectField
                 id={field.name}
                 name={field.name}
                 value={field.state.value}
-                icon={Tag}
+                icon={Layers}
                 iconPosition="left"
                 onValueChange={(v: string | null) =>
                   field.handleChange(v as CityType)
@@ -182,10 +220,7 @@ export function CityForm({
                   value: t,
                   label: CITY_TYPE_LABELS[t],
                 }))}
-                hasError={
-                  field.state.meta.isTouched && !field.state.meta.isValid
-                }
-                placeholder="Choisir un type"
+                disabled={isSubmitting}
               />
             </div>
           )}
@@ -209,11 +244,11 @@ export function CityForm({
             disabled={isSubmitting}
           >
             {isSubmitting ? (
-              <Loader className="size-3.5 animate-spin" />
+              <Loader2 className="size-3.5 animate-spin" />
             ) : (
               <Save className="size-3.5" />
             )}{" "}
-            {defaultValues ? "Modifier" : "Enregistrer"}
+            {defaultValues ? "Modifier" : "Ajouter"}
           </Button>
         </div>
       </form>

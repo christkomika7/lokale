@@ -1,20 +1,47 @@
 import { Elysia, t } from "elysia";
 import { prisma } from "../../lib/prisma";
+import { paginate } from "@lokale/lib/pagination";
+import { currencySchema } from "@lokale/lib/validator/localisation";
+
+const SORTABLE_FIELDS = ["name", "code"] as const;
+type SortableField = (typeof SORTABLE_FIELDS)[number];
+
+function isSortable(value: string): value is SortableField {
+  return (SORTABLE_FIELDS as readonly string[]).includes(value);
+}
 
 export const currencyRoutes = new Elysia({ prefix: "/currencies" })
-  .get("/", async () => {
-    return prisma.currency.findMany({
-      include: { _count: { select: { countries: true } } },
-      orderBy: { name: "asc" },
-    });
-  })
+  .get(
+    "/",
+    async ({ query }) => {
+      const { page, perPage, search, sortBy, sortOrder } = query;
+      const orderField = sortBy && isSortable(sortBy) ? sortBy : "name";
+
+      return paginate(prisma.currency, {
+        page,
+        perPage,
+        search,
+        searchFields: ["name", "code"],
+        orderBy: { [orderField]: sortOrder ?? "asc" },
+        include: { _count: { select: { countries: true } } },
+      });
+    },
+    {
+      query: t.Object({
+        page: t.Optional(t.Numeric()),
+        perPage: t.Optional(t.Numeric()),
+        search: t.Optional(t.String()),
+        sortBy: t.Optional(t.String()),
+        sortOrder: t.Optional(t.Union([t.Literal("asc"), t.Literal("desc")])),
+      }),
+    },
+  )
 
   .get(
     "/:id",
     async ({ params, status }) => {
       const currency = await prisma.currency.findUnique({
         where: { id: params.id },
-        include: { _count: { select: { countries: true } } },
       });
       if (!currency) return status(404, { message: "Devise introuvable" });
       return currency;
@@ -28,36 +55,30 @@ export const currencyRoutes = new Elysia({ prefix: "/currencies" })
       const exists = await prisma.currency.findFirst({
         where: { code: body.code },
       });
-      if (exists)
-        return status(409, { message: "Ce code de devise existe déjà" });
-
-      return prisma.currency.create({ data: body });
+      if (exists) return status(409, { message: "Ce code devise existe déjà" });
+      return prisma.currency.create({
+        data: {
+          name: body.name,
+          code: body.code,
+          symbol: body.symbol,
+        },
+      });
     },
     {
-      body: t.Object({
-        name: t.String({ minLength: 1 }),
-        code: t.String({ minLength: 3, maxLength: 3 }),
-        symbol: t.String(),
-      }),
+      body: currencySchema,
     },
   )
 
   .patch(
     "/:id",
     async ({ params, body, status }) => {
-      const currency = await prisma.currency.findUnique({
-        where: { id: params.id },
-      });
-      if (!currency) return status(404, { message: "Devise introuvable" });
-
       if (body.code) {
         const exists = await prisma.currency.findFirst({
           where: { code: body.code, id: { not: params.id } },
         });
         if (exists)
-          return status(409, { message: "Ce code de devise existe déjà" });
+          return status(409, { message: "Ce code devise existe déjà" });
       }
-
       return prisma.currency.update({ where: { id: params.id }, data: body });
     },
     {
@@ -72,15 +93,7 @@ export const currencyRoutes = new Elysia({ prefix: "/currencies" })
 
   .delete(
     "/:id",
-    async ({ params, status }) => {
-      const inUse = await prisma.country.count({
-        where: { currencyId: params.id },
-      });
-      if (inUse > 0)
-        return status(409, {
-          message: `${inUse} pays utilisent encore cette devise`,
-        });
-
+    async ({ params }) => {
       await prisma.currency.delete({ where: { id: params.id } });
       return { id: params.id };
     },

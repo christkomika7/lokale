@@ -1,47 +1,35 @@
-import { Loader2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "#/components/ui/tabs";
-import { api } from "./geo/lib/api";
+import { useGeoManagerStore } from "#/store/geomanager";
 
 import CurrencyManager from "./geo/currency-manager";
 import CountryManager from "./geo/country-manager";
+import CityManager from "./geo/city-manager";
 
 export default function GeoManager() {
-  const { data: currencies, isLoading: currenciesLoading } =
-    api.getCurrencies();
-  const { data: countries, isLoading: countriesLoading } = api.getCountries();
-
-  if (currenciesLoading || countriesLoading || !currencies || !countries) {
-    return (
-      <div className="flex items-center justify-center py-20 text-neutral-400">
-        <Loader2 className="size-5 animate-spin" />
-      </div>
-    );
-  }
-
-  const countryCountByCurrency = countries.reduce<Record<string, number>>(
-    (acc, c) => {
-      acc[c.currencyId] = (acc[c.currencyId] ?? 0) + 1;
-      return acc;
-    },
-    {},
-  );
+  const { activeTab, setActiveTab } = useGeoManagerStore();
 
   return (
-    <Tabs defaultValue="countries" className="space-y-3">
+    <Tabs
+      value={activeTab}
+      onValueChange={(v) => setActiveTab(v as typeof activeTab)}
+      className="space-y-3"
+    >
       <TabsList>
-        <TabsTrigger value="countries">Pays & Villes</TabsTrigger>
+        <TabsTrigger value="countries">Pays</TabsTrigger>
+        <TabsTrigger value="cities">Villes</TabsTrigger>
         <TabsTrigger value="currencies">Devises</TabsTrigger>
       </TabsList>
 
-      <TabsContent value="countries" className="space-y-3">
-        <CountryManager countries={countries} currencies={currencies} />
+      <TabsContent value="countries" className="space-y-3 min-h-70">
+        <CountryManager />
       </TabsContent>
 
-      <TabsContent value="currencies" className="space-y-3">
-        <CurrencyManager
-          currencies={currencies}
-          countryCountByCurrency={countryCountByCurrency}
-        />
+      <TabsContent value="cities" className="space-y-3 min-h-70">
+        <CityManager />
+      </TabsContent>
+
+      <TabsContent value="currencies" className="space-y-3 min-h-90">
+        <CurrencyManager />
       </TabsContent>
     </Tabs>
   );

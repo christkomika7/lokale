@@ -68,6 +68,7 @@ export const citySchema = z.object({
     .trim(),
   type: CityEnum,
   population: z.number().optional(),
+  countryId: z.string().optional(),
 });
 
 export const currencySchema = z.object({

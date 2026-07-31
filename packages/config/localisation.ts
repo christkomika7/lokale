@@ -47,3 +47,10 @@ export const CONTINENTS = [
 ] as const;
 
 export const CITY_TYPES = Object.keys(CITY_TYPE_LABELS) as CityType[];
+
+export const SORTABLE_FIELDS = [
+  "name",
+  "code",
+  "continent",
+  "phoneCode",
+] as const;

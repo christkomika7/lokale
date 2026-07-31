@@ -1,61 +1,89 @@
-import { Elysia } from "elysia";
-import {
-  categoryBody,
-  categoryPatchBody,
-  subCategoryBody,
-  subCategoryPatchBody,
-} from "@lokale/lib/validator/category";
+import { Elysia, t } from "elysia";
 import { prisma } from "../../lib/prisma";
+import { paginate } from "@lokale/lib/pagination";
+
+const SORTABLE_FIELDS = ["name", "slug"] as const;
+type SortableField = (typeof SORTABLE_FIELDS)[number];
+
+function isSortable(value: string): value is SortableField {
+  return (SORTABLE_FIELDS as readonly string[]).includes(value);
+}
 
 export const categoryRoutes = new Elysia({ prefix: "/categories" })
-  .get("/", async () => {
-    return prisma.category.findMany({
-      include: { subCategories: true },
-      orderBy: { name: "asc" },
-    });
-  })
+  .get(
+    "/",
+    async ({ query }) => {
+      const { page, perPage, search, sortBy, sortOrder } = query;
+      const orderField = sortBy && isSortable(sortBy) ? sortBy : "name";
 
-  .get("/:id", async ({ params, set }) => {
-    const category = await prisma.category.findUnique({
-      where: { id: params.id },
-      include: { subCategories: true },
-    });
-    if (!category) {
-      set.status = 404;
-      return { error: "Catégorie introuvable" };
-    }
-    return category;
-  })
+      return paginate(prisma.category, {
+        page,
+        perPage,
+        search,
+        searchFields: ["name", "slug"],
+        orderBy: { [orderField]: sortOrder ?? "asc" },
+        include: {
+          subCategories: true,
+          _count: { select: { subCategories: true } },
+        },
+      });
+    },
+    {
+      query: t.Object({
+        page: t.Optional(t.Numeric()),
+        perPage: t.Optional(t.Numeric()),
+        search: t.Optional(t.String()),
+        sortBy: t.Optional(t.String()),
+        sortOrder: t.Optional(t.Union([t.Literal("asc"), t.Literal("desc")])),
+      }),
+    },
+  )
+
+  .get(
+    "/:id",
+    async ({ params, status }) => {
+      const category = await prisma.category.findUnique({
+        where: { id: params.id },
+        include: { subCategories: true },
+      });
+      if (!category) return status(404, { message: "Catégorie introuvable" });
+      return category;
+    },
+    { params: t.Object({ id: t.String() }) },
+  )
 
   .post(
     "/",
-    async ({ body, set }) => {
+    async ({ body, status }) => {
       const exists = await prisma.category.findFirst({
         where: { slug: body.slug },
       });
-      if (exists) {
-        set.status = 409;
-        return { error: "Ce slug est déjà utilisé" };
-      }
+      if (exists) return status(409, { message: "Ce slug est déjà utilisé" });
+
       return prisma.category.create({
         data: body,
         include: { subCategories: true },
       });
     },
-    { body: categoryBody },
+    {
+      body: t.Object({
+        name: t.String({ minLength: 1 }),
+        slug: t.String({ minLength: 1 }),
+        description: t.String(),
+        color: t.Optional(t.String()),
+        icon: t.Optional(t.String()),
+      }),
+    },
   )
 
   .patch(
     "/:id",
-    async ({ params, body, set }) => {
+    async ({ params, body, status }) => {
       if (body.slug) {
         const exists = await prisma.category.findFirst({
           where: { slug: body.slug, NOT: { id: params.id } },
         });
-        if (exists) {
-          set.status = 409;
-          return { error: "Ce slug est déjà utilisé" };
-        }
+        if (exists) return status(409, { message: "Ce slug est déjà utilisé" });
       }
       return prisma.category.update({
         where: { id: params.id },
@@ -63,36 +91,23 @@ export const categoryRoutes = new Elysia({ prefix: "/categories" })
         include: { subCategories: true },
       });
     },
-    { body: categoryPatchBody },
-  )
-
-  .delete("/:id", async ({ params }) => {
-    await prisma.category.delete({ where: { id: params.id } });
-    return { id: params.id };
-  })
-
-  .post(
-    "/:id/sub-categories",
-    async ({ params, body }) => {
-      return prisma.subCategory.create({
-        data: { ...body, categoryID: params.id },
-      });
+    {
+      params: t.Object({ id: t.String() }),
+      body: t.Object({
+        name: t.Optional(t.String({ minLength: 1 })),
+        slug: t.Optional(t.String({ minLength: 1 })),
+        description: t.Optional(t.String()),
+        color: t.Optional(t.String()),
+        icon: t.Optional(t.String()),
+      }),
     },
-    { body: subCategoryBody },
   )
 
-  .patch(
-    "/:id/sub-categories/:subCategoryId",
-    async ({ params, body }) => {
-      return prisma.subCategory.update({
-        where: { id: params.subCategoryId },
-        data: body,
-      });
+  .delete(
+    "/:id",
+    async ({ params }) => {
+      await prisma.category.delete({ where: { id: params.id } });
+      return { id: params.id };
     },
-    { body: subCategoryPatchBody },
-  )
-
-  .delete("/:id/sub-categories/:subCategoryId", async ({ params }) => {
-    await prisma.subCategory.delete({ where: { id: params.subCategoryId } });
-    return { id: params.subCategoryId };
-  });
+    { params: t.Object({ id: t.String() }) },
+  );

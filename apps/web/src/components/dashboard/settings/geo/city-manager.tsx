@@ -1,49 +1,98 @@
-import { useState, useMemo } from "react";
-import { Plus, Loader2, Search } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Plus, Search } from "lucide-react";
+import {
+  createColumnHelper,
+  getCoreRowModel,
+  useReactTable,
+  type SortingState,
+} from "@tanstack/react-table";
+
 import { Button } from "#/components/ui/button";
-import { Badge } from "#/components/ui/badge";
-import { CityForm } from "./city/city-form";
+import { useDebouncedValue } from "#/hook/use-debounced-value";
+import { PER_PAGE } from "@lokale/config/pagination";
+import { DEBOUND } from "@lokale/config/input";
 import { api } from "./lib/api";
-import { CITY_TYPE_CLASS, CITY_TYPE_LABELS } from "@lokale/config/localisation";
 
 import type { PanelMode } from "@lokale/types/panel";
 import type { City } from "@lokale/types/localisation";
 
+import Heading from "#/components/typography/heading";
 import PanelContainer from "#/components/sheet/panel-container";
-import CityDetail from "./city/city-detail";
 import InputIcon from "#/components/input/input-icon";
+import Text from "#/components/typography/Text";
+import CitiesTable from "#/components/table/localisation/city/city";
+import Pagination from "#/components/pagination/pagination";
 
-interface CityManagerProps {
-  countryId: string;
-  cities: City[];
-  isLoading?: boolean;
-}
+import CityDetail from "./city/city-detail";
+import { CityForm } from "./city/city-form";
 
-// TODO: revoir l'affichage des villes (Utiliser tanstack table avec son systeme de filtres)
+const columnHelper = createColumnHelper<City>();
 
-export default function CityManager({
-  countryId,
-  cities,
-  isLoading,
-}: CityManagerProps) {
+export default function CityManager() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [mode, setMode] = useState<PanelMode>("detail");
   const [open, setOpen] = useState(false);
-  const [globalFilter, setGlobalFilter] = useState("");
 
-  const createCity = api.createCity(countryId);
-  const updateCity = api.updateCity(countryId, selectedId ?? "");
-  const deleteCity = api.deleteCity(countryId, selectedId ?? "");
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, DEBOUND);
+  const [page, setPage] = useState(1);
+  const [sorting, setSorting] = useState<SortingState>([
+    { id: "name", desc: false },
+  ]);
 
-  const filtered = useMemo(
-    () =>
-      cities.filter((c) =>
-        c.name.toLowerCase().includes(globalFilter.toLowerCase()),
-      ),
-    [cities, globalFilter],
-  );
+  const sortField = sorting[0]?.id ?? "name";
+  const sortOrder = sorting[0]?.desc ? "desc" : "asc";
+
+  const { data, isLoading, isFetching } = api.getCities({
+    page,
+    perPage: PER_PAGE,
+    search: debouncedSearch,
+    sortBy: sortField,
+    sortOrder,
+  });
+
+  const cities = data?.items ?? [];
+  const meta = data?.meta;
+
+  const createCity = api.createCity();
+  const updateCity = api.updateCity(selectedId ?? "");
+  const deleteCity = api.deleteCity(selectedId ?? "");
 
   const selected = cities.find((c) => c.id === selectedId) ?? null;
+
+  const columns = useMemo(
+    () => [
+      columnHelper.accessor("name", {
+        id: "name",
+        header: "Ville",
+        enableSorting: true,
+      }),
+      columnHelper.accessor("region", {
+        id: "region",
+        header: "Région",
+        enableSorting: true,
+      }),
+      columnHelper.accessor("population", {
+        id: "population",
+        header: "Population",
+        enableSorting: true,
+      }),
+    ],
+    [],
+  );
+
+  const table = useReactTable({
+    data: cities,
+    columns,
+    manualPagination: true,
+    manualSorting: true,
+    manualFiltering: true,
+    state: { sorting },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+  });
+
+  const rows = table.getRowModel().rows;
 
   function openDetail(city: City) {
     setSelectedId(city.id);
@@ -62,85 +111,61 @@ export default function CityManager({
     setOpen(false);
   }
 
+  function handleDelete() {
+    deleteCity.mutate(undefined, { onSuccess: closePanel });
+  }
+
+  function handleSearchChange(value: string) {
+    setSearch(value);
+    setPage(1);
+  }
+
   return (
-    <div className="border-t border-input dark:border-neutral-700">
-      <div className="flex items-center gap-2 px-3 py-2 bg-neutral-50/40 dark:bg-neutral-800/10">
+    <div className="border border-input bg-white/80 dark:bg-neutral-900/30 rounded-lg overflow-hidden">
+      <div className="flex items-center justify-between px-3 py-2.5 border-b border-input dark:border-neutral-700">
+        <Heading className="text-2xl mb-0!">Villes</Heading>
+        <Button
+          variant="amber"
+          size="sm"
+          className="rounded-md gap-1.5 text-[13px] h-8"
+          onClick={openCreate}
+        >
+          <Plus className="size-3.5" /> Ajouter une ville
+        </Button>
+      </div>
+
+      <div className="flex items-center gap-3 p-2.5 border-b border-input dark:border-neutral-700 bg-neutral-50/40 dark:bg-neutral-800/10">
         <InputIcon
           type="search"
           icon={Search}
           placeholder="Rechercher une ville…"
-          value={globalFilter}
+          value={search}
           position="left"
-          onChange={(e) => setGlobalFilter(e.target.value)}
+          onChange={(e) => handleSearchChange(e.target.value)}
           className="max-w-55 text-[12px] rounded-sm!"
         />
-        <span className="text-[11px] text-neutral-400 ml-auto">
-          {filtered.length} ville{filtered.length !== 1 ? "s" : ""}
-        </span>
-        <Button
-          variant="secondary"
-          size="sm"
-          className="h-8 rounded-md"
-          onClick={openCreate}
-        >
-          <Plus className="size-3" /> Ajouter une ville
-        </Button>
+        <Text className="ml-auto" size="xxs">
+          {meta?.total ?? 0} ville{(meta?.total ?? 0) !== 1 ? "s" : ""}
+        </Text>
       </div>
 
-      {isLoading ? (
-        <div className="flex items-center justify-center py-6 text-neutral-400">
-          <Loader2 className="size-4 animate-spin" />
-        </div>
-      ) : filtered.length === 0 ? (
-        <div className="p-3 text-center text-[12px] text-neutral-400">
-          Aucune ville —{" "}
-          <button
-            className="text-amber-500 hover:text-amber-600 font-medium"
-            onClick={openCreate}
-          >
-            en ajouter une
-          </button>
-        </div>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-[12px]">
-            <thead>
-              <tr className="border-b border-input dark:border-neutral-700 bg-neutral-50/60 dark:bg-neutral-800/20">
-                <th className="p-3 text-left font-normal text-[11px] uppercase tracking-wide text-neutral-400">
-                  Ville
-                </th>
-                <th className="p-3 text-left font-normal text-[11px] uppercase tracking-wide text-neutral-400">
-                  Région
-                </th>
-                <th className="p-3 text-left font-normal text-[11px] uppercase tracking-wide text-neutral-400">
-                  Type
-                </th>
-                <th className="p-3 text-left font-normal text-[11px] uppercase tracking-wide text-neutral-400">
-                  Population
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-50 dark:divide-neutral-800/60">
-              {filtered.map((c) => (
-                <tr
-                  key={c.id}
-                  className="hover:bg-neutral-50/40 dark:hover:bg-neutral-800/10 transition-colors cursor-pointer"
-                  onClick={() => openDetail(c)}
-                >
-                  <td className="p-3 font-medium text-neutral-700 dark:text-neutral-200">
-                    {c.name}
-                  </td>
-                  <td className="p-3 text-neutral-400">{c.region || "—"}</td>
-                  <td className="p-3">
-                    <Badge variant="info">{CITY_TYPE_LABELS[c.type]}</Badge>
-                  </td>
-                  <td className="p-3 text-neutral-400">
-                    {c.population ? c.population.toLocaleString("fr-FR") : "—"}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <CitiesTable
+        rows={rows}
+        isLoading={isLoading}
+        isFetching={isFetching}
+        selectedId={selectedId}
+        onOpen={openDetail}
+        onClose={closePanel}
+        panelMode={mode}
+      />
+
+      {meta && meta.totalPages > 1 && (
+        <div className="flex justify-end p-3 border-t border-input dark:border-neutral-700">
+          <Pagination
+            page={meta.page}
+            totalPages={meta.totalPages}
+            onPageChange={setPage}
+          />
         </div>
       )}
 
@@ -154,14 +179,7 @@ export default function CityManager({
           <CityDetail
             city={city}
             onEdit={actions.toEdit}
-            onDelete={() => {
-              deleteCity.mutate(undefined, {
-                onSuccess: () => {
-                  actions.close();
-                  closePanel();
-                },
-              });
-            }}
+            onDelete={handleDelete}
             onClose={actions.close}
             isDeleting={deleteCity.isPending}
           />

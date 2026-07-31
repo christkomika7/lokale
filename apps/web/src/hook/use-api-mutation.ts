@@ -41,7 +41,7 @@ export function useApiMutation<TResponse, TVariables = unknown>(
 
       return api[method]<TResponse, TVariables>(url, variables);
     },
-    onSuccess: (data, variables, onMutateResult, context) => {
+    onSuccess: async (data, variables, onMutateResult, context) => {
       if (successMessage) {
         toast.success(
           typeof successMessage === "function"
@@ -50,12 +50,16 @@ export function useApiMutation<TResponse, TVariables = unknown>(
         );
       }
       if (invalidate) {
-        queryClient.invalidateQueries({ queryKey: invalidate });
+        await Promise.all(
+          invalidate.map((key) =>
+            queryClient.invalidateQueries({ queryKey: [key] }),
+          ),
+        );
       }
       onSuccess?.(data, variables, onMutateResult, context);
     },
-    onError: (error, variables, onMutateResult, context) => {
-      onError?.(error, variables, onMutateResult, context);
+    onError: async (error, variables, onMutateResult, context) => {
+      await onError?.(error, variables, onMutateResult, context);
     },
     ...rest,
   });

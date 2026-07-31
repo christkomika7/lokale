@@ -14,10 +14,12 @@ import type {
   SubCategorySchemaType,
 } from "@lokale/types/category";
 
+import SelectField from "#/components/select/select-field";
 import PanelIntro from "#/components/sheet/panel-intro";
 import Heading from "#/components/typography/heading";
 import Required from "#/components/input/required";
 import Input from "#/components/input/input";
+import { categoryApi } from "../lib/api";
 
 interface SubCategoryFormProps {
   defaultValues?: SubCategory;
@@ -32,17 +34,29 @@ export function SubCategoryForm({
   onCancel,
   isSubmitting,
 }: SubCategoryFormProps) {
+  // Liste complète des catégories pour le select — perPage large volontaire,
+  // pas une pagination réelle ici, juste une liste de choix.
+  const { data: categoriesData, isLoading: categoriesLoading } =
+    categoryApi.getCategories({
+      perPage: 200,
+      sortBy: "name",
+      sortOrder: "asc",
+    });
+  const categories = categoriesData?.items ?? [];
+
   const form = useForm({
     defaultValues: {
       name: defaultValues?.name ?? "",
       slug: defaultValues?.slug ?? "",
       description: defaultValues?.description ?? "",
+      categoryID: defaultValues?.categoryID ?? "",
     },
     onSubmit: ({ value }) => {
       onSubmit({
         name: value.name.trim(),
         slug: value.slug.trim() || toSlug(value.name),
         description: value.description.trim(),
+        categoryID: value.categoryID,
       });
     },
   });
@@ -113,6 +127,52 @@ export function SubCategoryForm({
           )}
         </form.Field>
 
+        <form.Field
+          name="categoryID"
+          validators={{
+            onChange: ({ value }) =>
+              !value ? "Catégorie obligatoire" : undefined,
+          }}
+        >
+          {(field) => (
+            <div>
+              <Label htmlFor={field.name}>
+                Catégorie <Required />
+              </Label>
+              <SelectField
+                id={field.name}
+                name={field.name}
+                value={field.state.value}
+                icon={Layers}
+                iconPosition="left"
+                onValueChange={(v: string | null) =>
+                  field.handleChange(v as string)
+                }
+                options={categories.map((c) => ({
+                  value: c.id,
+                  label: c.name,
+                }))}
+                emptyMessage={
+                  categoriesLoading
+                    ? "Chargement…"
+                    : "Aucune catégorie disponible"
+                }
+                hasError={
+                  field.state.meta.isTouched && !field.state.meta.isValid
+                }
+                placeholder="Choisir une catégorie"
+                disabled={isSubmitting || categoriesLoading}
+              />
+              <InputErrorContainer>
+                {field.state.meta.isTouched &&
+                  field.state.meta.errors.map((error, i) => (
+                    <InputErrorMessage key={i} message={error} />
+                  ))}
+              </InputErrorContainer>
+            </div>
+          )}
+        </form.Field>
+
         <form.Field name="slug">
           {(field) => (
             <div>
@@ -128,7 +188,6 @@ export function SubCategoryForm({
                 placeholder="smartphones (auto-généré si vide)"
                 position="left"
                 className="min-w-auto w-full rounded-lg font-mono"
-                required={false}
               />
             </div>
           )}
@@ -148,7 +207,6 @@ export function SubCategoryForm({
                 className="text-[13px] resize-none rounded-lg"
                 rows={2}
                 disabled={isSubmitting}
-                required={false}
               />
             </div>
           )}

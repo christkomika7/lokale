@@ -23,3 +23,13 @@ export function toSlug(value: string): string {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 }
+
+export function buildQuery<T extends Record<string, unknown>>(params?: T) {
+  if (!params) return "";
+  const sp = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== "") sp.set(k, String(v));
+  });
+  const qs = sp.toString();
+  return qs ? `?${qs}` : "";
+}

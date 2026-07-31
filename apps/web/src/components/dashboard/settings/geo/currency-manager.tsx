@@ -1,9 +1,16 @@
-import { useState, useMemo } from "react";
-import { Plus, Loader2, Search } from "lucide-react";
-import { CurrencyDetail } from "./currency/currency-detail";
-import { CurrencyForm } from "./currency/currency-form";
+import { useMemo, useState } from "react";
+import { Plus, Search } from "lucide-react";
+import {
+  createColumnHelper,
+  getCoreRowModel,
+  useReactTable,
+  type SortingState,
+} from "@tanstack/react-table";
+
 import { Button } from "#/components/ui/button";
-import { Badge } from "#/components/ui/badge";
+import { useDebouncedValue } from "#/hook/use-debounced-value";
+import { PER_PAGE } from "@lokale/config/pagination";
+import { DEBOUND } from "@lokale/config/input";
 import { api } from "./lib/api";
 
 import type { PanelMode } from "@lokale/types/panel";
@@ -12,40 +19,75 @@ import type { Currency } from "@lokale/types/localisation";
 import Heading from "#/components/typography/heading";
 import PanelContainer from "#/components/sheet/panel-container";
 import InputIcon from "#/components/input/input-icon";
+import Text from "#/components/typography/Text";
+import CurrenciesTable from "#/components/table/localisation/currency/currency";
+import Pagination from "#/components/pagination/pagination";
 
-interface CurrencyManagerProps {
-  currencies: Currency[];
-  countryCountByCurrency: Record<string, number>;
-  isLoading?: boolean;
-}
+import { CurrencyDetail } from "./currency/currency-detail";
+import { CurrencyForm } from "./currency/currency-form";
 
-// TODO: revoir l'affichage des devises (Utiliser tanstack table avec son systeme de filtres)
+const columnHelper = createColumnHelper<Currency>();
 
-export default function CurrencyManager({
-  currencies,
-  countryCountByCurrency,
-  isLoading,
-}: CurrencyManagerProps) {
+export default function CurrencyManager() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [mode, setMode] = useState<PanelMode>("detail");
   const [open, setOpen] = useState(false);
-  const [globalFilter, setGlobalFilter] = useState("");
+
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, DEBOUND);
+  const [page, setPage] = useState(1);
+  const [sorting, setSorting] = useState<SortingState>([
+    { id: "name", desc: false },
+  ]);
+
+  const sortField = sorting[0]?.id ?? "name";
+  const sortOrder = sorting[0]?.desc ? "desc" : "asc";
+
+  const { data, isLoading, isFetching } = api.getCurrencies({
+    page,
+    perPage: PER_PAGE,
+    search: debouncedSearch,
+    sortBy: sortField,
+    sortOrder,
+  });
+
+  const currencies = data?.items ?? [];
+  const meta = data?.meta;
 
   const createCurrency = api.createCurrency();
   const updateCurrency = api.updateCurrency(selectedId ?? "");
   const deleteCurrency = api.deleteCurrency(selectedId ?? "");
 
-  const filtered = useMemo(
-    () =>
-      currencies.filter(
-        (c) =>
-          c.name.toLowerCase().includes(globalFilter.toLowerCase()) ||
-          c.code.toLowerCase().includes(globalFilter.toLowerCase()),
-      ),
-    [currencies, globalFilter],
+  const selected = currencies.find((c) => c.id === selectedId) ?? null;
+
+  const columns = useMemo(
+    () => [
+      columnHelper.accessor("name", {
+        id: "name",
+        header: "Nom",
+        enableSorting: true,
+      }),
+      columnHelper.accessor("code", {
+        id: "code",
+        header: "Code",
+        enableSorting: true,
+      }),
+    ],
+    [],
   );
 
-  const selected = currencies.find((c) => c.id === selectedId) ?? null;
+  const table = useReactTable({
+    data: currencies,
+    columns,
+    manualPagination: true,
+    manualSorting: true,
+    manualFiltering: true,
+    state: { sorting },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+  });
+
+  const rows = table.getRowModel().rows;
 
   function openDetail(currency: Currency) {
     setSelectedId(currency.id);
@@ -64,14 +106,19 @@ export default function CurrencyManager({
     setOpen(false);
   }
 
-  function handleDelete(id: string) {
-    const count = countryCountByCurrency[id] ?? 0;
+  function handleDelete(currency: Currency) {
+    const count = currency._count?.countries ?? 0;
     if (
       count > 0 &&
       !confirm(`${count} pays utilisent cette devise. Supprimer quand même ?`)
     )
       return;
     deleteCurrency.mutate(undefined, { onSuccess: closePanel });
+  }
+
+  function handleSearchChange(value: string) {
+    setSearch(value);
+    setPage(1);
   }
 
   return (
@@ -88,70 +135,39 @@ export default function CurrencyManager({
         </Button>
       </div>
 
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-input dark:border-neutral-700 bg-slate-50/40 dark:bg-neutral-800/10">
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-input dark:border-neutral-700 bg-neutral-50/40 dark:bg-neutral-800/10">
         <InputIcon
           type="search"
           icon={Search}
-          placeholder="Rechercher un pays…"
-          value={globalFilter}
+          placeholder="Rechercher une devise…"
+          value={search}
           position="left"
-          onChange={(e) => setGlobalFilter(e.target.value)}
+          onChange={(e) => handleSearchChange(e.target.value)}
           className="max-w-55 text-[12px] rounded-sm!"
         />
-        <span className="text-[11px] text-neutral-400 ml-auto">
-          {filtered.length} devise{filtered.length !== 1 ? "s" : ""}
-        </span>
+        <Text className="ml-auto" size="xxs">
+          {meta?.total ?? 0} devise{(meta?.total ?? 0) !== 1 ? "s" : ""}
+        </Text>
       </div>
 
-      {isLoading ? (
-        <div className="flex items-center justify-center py-12 text-neutral-400">
-          <Loader2 className="size-5 animate-spin" />
+      <CurrenciesTable
+        rows={rows}
+        isLoading={isLoading}
+        isFetching={isFetching}
+        selectedId={selectedId}
+        onOpen={openDetail}
+        onClose={closePanel}
+        panelMode={mode}
+      />
+
+      {meta && meta.totalPages > 1 && (
+        <div className="flex justify-end p-3 border-t border-input dark:border-neutral-700">
+          <Pagination
+            page={meta.page}
+            totalPages={meta.totalPages}
+            onPageChange={setPage}
+          />
         </div>
-      ) : filtered.length === 0 ? (
-        <div className="py-10 text-center text-[13px] text-neutral-400">
-          Aucune devise trouvée.
-        </div>
-      ) : (
-        <table className="w-full text-[12px]">
-          <thead>
-            <tr className="border-b border-input dark:border-neutral-700 bg-slate-50/60 dark:bg-neutral-800/20">
-              <th className="p-3 text-left font-normal text-[11px] uppercase tracking-wide text-neutral-400">
-                Nom
-              </th>
-              <th className="p-3 text-left font-normal text-[11px] uppercase tracking-wide text-neutral-400">
-                Code
-              </th>
-              <th className="p-3 text-left font-normal text-[11px] uppercase tracking-wide text-neutral-400">
-                Symbole
-              </th>
-              <th className="p-3 text-left font-normal text-[11px] uppercase tracking-wide text-neutral-400">
-                Pays
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-50 dark:divide-neutral-800/60">
-            {filtered.map((c) => (
-              <tr
-                key={c.id}
-                className="hover:bg-slate-50/40 dark:hover:bg-neutral-800/10 transition-colors cursor-pointer"
-                onClick={() => openDetail(c)}
-              >
-                <td className="px-3 py-2 font-medium text-neutral-700 dark:text-neutral-200">
-                  {c.name}
-                </td>
-                <td className="px-3 py-2 text-neutral-400">{c.code}</td>
-                <td className="px-3 py-2 text-neutral-400">
-                  {c.symbol || "—"}
-                </td>
-                <td className="px-3 py-2">
-                  <Badge variant="info" className="min-w-10">
-                    {countryCountByCurrency[c.id] ?? 0}
-                  </Badge>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
       )}
 
       <PanelContainer<Currency>
@@ -163,9 +179,9 @@ export default function CurrencyManager({
         detail={(currency, actions) => (
           <CurrencyDetail
             currency={currency}
-            countryCount={countryCountByCurrency[currency.id] ?? 0}
+            countryCount={currency._count?.countries ?? 0}
             onEdit={actions.toEdit}
-            onDelete={() => handleDelete(currency.id)}
+            onDelete={() => handleDelete(currency)}
             onClose={actions.close}
             isDeleting={deleteCurrency.isPending}
           />

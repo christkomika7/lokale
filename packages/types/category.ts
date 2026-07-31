@@ -1,11 +1,3 @@
-export interface SubCategory {
-  id: string;
-  name: string;
-  slug: string;
-  description: string;
-  categoryID: string;
-}
-
 export interface Category {
   id: string;
   name: string;
@@ -14,6 +6,20 @@ export interface Category {
   color: string | null;
   icon: string | null;
   subCategories: SubCategory[];
+  _count?: { subCategories: number };
+}
+
+export interface SubCategory {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  categoryID: string;
+  category: {
+    id: string;
+    name: string;
+    slug: string;
+  };
 }
 
 export type CategorySchemaType = {
@@ -28,4 +34,5 @@ export type SubCategorySchemaType = {
   name: string;
   slug: string;
   description: string;
+  categoryID: string;
 };

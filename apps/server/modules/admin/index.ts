@@ -5,6 +5,7 @@ import { countryRoutes } from "./country";
 import { cityRoutes } from "./city";
 import { currencyRoutes } from "./currency";
 import { categoryRoutes } from "./category";
+import { subCategoryRoutes } from "./sub-category";
 
 export const adminRoute = new Elysia({ prefix: "/admin" })
   .use(userRoute)
@@ -12,4 +13,5 @@ export const adminRoute = new Elysia({ prefix: "/admin" })
   .use(countryRoutes)
   .use(cityRoutes)
   .use(currencyRoutes)
-  .use(categoryRoutes);
+  .use(categoryRoutes)
+  .use(subCategoryRoutes);

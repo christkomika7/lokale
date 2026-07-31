@@ -6,6 +6,7 @@ import { corsPlugin } from "../plugins/cors";
 import { rateLimiter } from "../middleware/rate-limiter";
 import { rateLimitStatus } from "../modules/security/rate-limite-status";
 import { adminRoute } from "../modules/admin";
+import { workspaceRoute } from "../modules/workspace";
 import { subscriptionRoute } from "../modules/subscription";
 import { userAuthRoute } from "../modules/auth/user";
 import { lastSeenPlugin } from "../middleware/last-seen";
@@ -24,5 +25,6 @@ export const app = new Elysia()
   // .use(route)
   // .use(loggerPlugin)
   .use(adminRoute)
+  .use(workspaceRoute)
   .use(subscriptionRoute)
   .use(userAuthRoute);

@@ -1,3 +1,5 @@
+import { SORTABLE_FIELDS } from "@lokale/config/localisation";
+import type { SortableField } from "@lokale/types/localisation";
 import { Prisma } from "../generated/prisma/client";
 import { EmailAddress } from "../type/mailer";
 
@@ -39,4 +41,8 @@ export function serializeError(
   }
 
   return { raw: String(error) };
+}
+
+export function isSortable(value: string): value is SortableField {
+  return (SORTABLE_FIELDS as readonly string[]).includes(value);
 }

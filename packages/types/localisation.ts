@@ -4,6 +4,7 @@ import {
   citySchema,
   currencySchema,
 } from "../lib/validator/localisation";
+import type { SORTABLE_FIELDS } from "../config/localisation";
 
 export type Continent =
   | "Afrique"
@@ -25,6 +26,10 @@ export interface Currency extends CurrencySchemaType {
 export interface City extends CitySchemaType {
   id: string;
   countryId: string;
+  country: Omit<
+    Country,
+    "phoneCode" | "continent" | "currencyId" | "cities" | "currency" | "_count"
+  >;
 }
 
 export interface Country extends CountrySchemaType {
@@ -33,3 +38,5 @@ export interface Country extends CountrySchemaType {
   cities: City[];
   _count?: { cities: number };
 }
+
+export type SortableField = (typeof SORTABLE_FIELDS)[number];

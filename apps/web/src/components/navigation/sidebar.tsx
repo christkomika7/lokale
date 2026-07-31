@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useSettingsSidebarStore } from "#/store/settings-sidebar";
+
 import type { TabKey } from "@lokale/types/navigation";
 import type { LucideIcon } from "lucide-react";
 
@@ -16,7 +17,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ tabs, content }: SidebarProps) {
-  const [tab, setTab] = useState<TabKey>("general");
+  const { activeTab: tab, setActiveTab: setTab } = useSettingsSidebarStore();
 
   const current = tabs.find((t) => t.key === tab)!;
   return (

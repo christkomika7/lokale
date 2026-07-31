@@ -1,76 +1,137 @@
 import { Elysia, t } from "elysia";
 import { prisma } from "../../lib/prisma";
+import { paginate } from "@lokale/lib/pagination";
+import { CityType } from "../../generated/prisma/enums";
 
-const CityType = t.Union([
-  t.Literal("CAPITAL"),
-  t.Literal("METROPOLIS"),
-  t.Literal("CITY"),
-  t.Literal("TOWN"),
-  t.Literal("VILLAGE"),
-  t.Literal("HAMLET"),
-  t.Literal("SUBURB"),
-  t.Literal("INDUSTRIAL_ZONE"),
-  t.Literal("COMMERCIAL_ZONE"),
-  t.Literal("TOURIST_AREA"),
-  t.Literal("PORT_CITY"),
-  t.Literal("BORDER_CITY"),
-]);
+const SORTABLE_FIELDS = ["name", "region", "population", "type"] as const;
+type SortableField = (typeof SORTABLE_FIELDS)[number];
 
-export const cityRoutes = new Elysia({ prefix: "/:countryId/cities" })
-  .post(
+function isSortable(value: string): value is SortableField {
+  return (SORTABLE_FIELDS as readonly string[]).includes(value);
+}
+
+export const cityRoutes = new Elysia({ prefix: "/cities" })
+  .get(
     "/",
-    async ({ params, body, status }) => {
-      const country = await prisma.country.findUnique({
-        where: { id: params.countryId },
-      });
-      if (!country) return status(404, { message: "Pays introuvable" });
+    async ({ query }) => {
+      const { page, perPage, search, sortBy, sortOrder, countryId, type } =
+        query;
 
-      return prisma.city.create({
-        data: { ...body, countryId: params.countryId },
+      const orderField = sortBy && isSortable(sortBy) ? sortBy : "name";
+
+      return paginate(prisma.city, {
+        page,
+        perPage,
+        search,
+        searchFields: ["name", "region"],
+        where: {
+          ...(countryId ? { countryId } : {}),
+          ...(type ? { type: type as CityType } : {}),
+        },
+        orderBy: { [orderField]: sortOrder ?? "asc" },
+        include: {
+          country: { select: { id: true, name: true, code: true } },
+        },
       });
     },
     {
-      params: t.Object({ countryId: t.String() }),
+      query: t.Object({
+        page: t.Optional(t.Numeric()),
+        perPage: t.Optional(t.Numeric()),
+        search: t.Optional(t.String()),
+        sortBy: t.Optional(t.String()),
+        sortOrder: t.Optional(t.Union([t.Literal("asc"), t.Literal("desc")])),
+        countryId: t.Optional(t.String()),
+        type: t.Optional(t.String()),
+      }),
+    },
+  )
+
+  .get(
+    "/:id",
+    async ({ params, status }) => {
+      const city = await prisma.city.findUnique({
+        where: { id: params.id },
+        include: { country: { select: { id: true, name: true, code: true } } },
+      });
+      if (!city) return status(404, { message: "Ville introuvable" });
+      return city;
+    },
+    { params: t.Object({ id: t.String() }) },
+  )
+
+  .post(
+    "/",
+    async ({ body, status }) => {
+      const country = await prisma.country.findUnique({
+        where: { id: body.countryId },
+      });
+      if (!country) return status(400, { message: "Pays invalide" });
+
+      return prisma.city.create({
+        data: {
+          name: body.name,
+          population: body.population,
+          region: body.region || "",
+          type: body.type as CityType,
+          countryId: body.countryId as string,
+        },
+        include: { country: { select: { id: true, name: true, code: true } } },
+      });
+    },
+    {
       body: t.Object({
         name: t.String({ minLength: 1 }),
         region: t.Optional(t.String()),
-        type: CityType,
-        population: t.Optional(t.Number({ minimum: 1 })),
+        type: t.String(),
+        population: t.Optional(t.Number()),
+        countryId: t.String({ minLength: 1 }),
       }),
     },
   )
 
   .patch(
-    "/:cityId",
+    "/:id",
     async ({ params, body, status }) => {
-      const city = await prisma.city.findFirst({
-        where: { id: params.cityId, countryId: params.countryId },
-      });
+      const city = await prisma.city.findUnique({ where: { id: params.id } });
       if (!city) return status(404, { message: "Ville introuvable" });
 
-      return prisma.city.update({ where: { id: params.cityId }, data: body });
+      if (body.countryId) {
+        const country = await prisma.country.findUnique({
+          where: { id: body.countryId },
+        });
+        if (!country) return status(400, { message: "Pays invalide" });
+      }
+
+      return prisma.city.update({
+        where: { id: params.id },
+        data: {
+          ...(body.name && { name: body.name }),
+          ...(body.population && { population: body.population }),
+          ...(body.region && { region: body.region }),
+          ...(body.type && { type: body.type as CityType }),
+          ...(body.countryId && { countryId: body.countryId as string }),
+        },
+        include: { country: { select: { id: true, name: true, code: true } } },
+      });
     },
     {
-      params: t.Object({ countryId: t.String(), cityId: t.String() }),
+      params: t.Object({ id: t.String() }),
       body: t.Object({
         name: t.Optional(t.String({ minLength: 1 })),
         region: t.Optional(t.String()),
-        type: t.Optional(CityType),
-        population: t.Optional(t.Number({ minimum: 1 })),
+        type: t.Optional(t.String()),
+        population: t.Optional(t.Number()),
+        countryId: t.Optional(t.String()),
       }),
     },
   )
 
   .delete(
-    "/:cityId",
-    async ({ params, status }) => {
-      const city = await prisma.city.findFirst({
-        where: { id: params.cityId, countryId: params.countryId },
-      });
-      if (!city) return status(404, { message: "Ville introuvable" });
-
-      await prisma.city.delete({ where: { id: params.cityId } });
-      return { id: params.cityId };
+    "/:id",
+    async ({ params }) => {
+      await prisma.city.delete({ where: { id: params.id } });
+      return { id: params.id };
     },
-    { params: t.Object({ countryId: t.String(), cityId: t.String() }) },
+    { params: t.Object({ id: t.String() }) },
   );

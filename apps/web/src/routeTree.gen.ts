@@ -26,6 +26,7 @@ import { Route as privateAdminIndexRouteImport } from './routes/(private)/admin/
 import { Route as privateAdminWorkspaceRouteImport } from './routes/(private)/admin/workspace'
 import { Route as privateAdminUsersRouteImport } from './routes/(private)/admin/users'
 import { Route as privateAdminMonitoringRouteRouteImport } from './routes/(private)/admin/monitoring/route'
+import { Route as privateWorkspaceBusinessIndexRouteImport } from './routes/(private)/workspace/business/index'
 import { Route as privateAdminSettingsIndexRouteImport } from './routes/(private)/admin/settings/index'
 import { Route as privateAdminMonitoringIndexRouteImport } from './routes/(private)/admin/monitoring/index'
 import { Route as privateAdminMonitoringSuspiciousActivitiesRouteImport } from './routes/(private)/admin/monitoring/suspicious-activities'
@@ -33,6 +34,7 @@ import { Route as privateAdminMonitoringSanctionsRouteImport } from './routes/(p
 import { Route as privateAdminMonitoringNotificationsRouteImport } from './routes/(private)/admin/monitoring/notifications'
 import { Route as privateAdminMonitoringLogsRouteImport } from './routes/(private)/admin/monitoring/logs'
 import { Route as privateAdminMonitoringAnnouncementsRouteImport } from './routes/(private)/admin/monitoring/announcements'
+import { Route as privateWorkspaceBusinessIdManageRouteImport } from './routes/(private)/workspace/business/$id.manage'
 
 const publicRouteRoute = publicRouteRouteImport.update({
   id: '/(public)',
@@ -118,6 +120,12 @@ const privateAdminMonitoringRouteRoute =
     path: '/monitoring',
     getParentRoute: () => privateAdminRouteRoute,
   } as any)
+const privateWorkspaceBusinessIndexRoute =
+  privateWorkspaceBusinessIndexRouteImport.update({
+    id: '/workspace/business/',
+    path: '/workspace/business/',
+    getParentRoute: () => privateRouteRoute,
+  } as any)
 const privateAdminSettingsIndexRoute =
   privateAdminSettingsIndexRouteImport.update({
     id: '/settings/',
@@ -160,6 +168,12 @@ const privateAdminMonitoringAnnouncementsRoute =
     path: '/announcements',
     getParentRoute: () => privateAdminMonitoringRouteRoute,
   } as any)
+const privateWorkspaceBusinessIdManageRoute =
+  privateWorkspaceBusinessIdManageRouteImport.update({
+    id: '/workspace/business/$id/manage',
+    path: '/workspace/business/$id/manage',
+    getParentRoute: () => privateRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/admin': typeof privateAdminRouteRouteWithChildren
@@ -184,6 +198,8 @@ export interface FileRoutesByFullPath {
   '/admin/monitoring/suspicious-activities': typeof privateAdminMonitoringSuspiciousActivitiesRoute
   '/admin/monitoring/': typeof privateAdminMonitoringIndexRoute
   '/admin/settings/': typeof privateAdminSettingsIndexRoute
+  '/workspace/business/': typeof privateWorkspaceBusinessIndexRoute
+  '/workspace/business/$id/manage': typeof privateWorkspaceBusinessIdManageRoute
 }
 export interface FileRoutesByTo {
   '/forgot-password': typeof authForgotPasswordRoute
@@ -206,6 +222,8 @@ export interface FileRoutesByTo {
   '/admin/monitoring/suspicious-activities': typeof privateAdminMonitoringSuspiciousActivitiesRoute
   '/admin/monitoring': typeof privateAdminMonitoringIndexRoute
   '/admin/settings': typeof privateAdminSettingsIndexRoute
+  '/workspace/business': typeof privateWorkspaceBusinessIndexRoute
+  '/workspace/business/$id/manage': typeof privateWorkspaceBusinessIdManageRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -233,6 +251,8 @@ export interface FileRoutesById {
   '/(private)/admin/monitoring/suspicious-activities': typeof privateAdminMonitoringSuspiciousActivitiesRoute
   '/(private)/admin/monitoring/': typeof privateAdminMonitoringIndexRoute
   '/(private)/admin/settings/': typeof privateAdminSettingsIndexRoute
+  '/(private)/workspace/business/': typeof privateWorkspaceBusinessIndexRoute
+  '/(private)/workspace/business/$id/manage': typeof privateWorkspaceBusinessIdManageRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -259,6 +279,8 @@ export interface FileRouteTypes {
     | '/admin/monitoring/suspicious-activities'
     | '/admin/monitoring/'
     | '/admin/settings/'
+    | '/workspace/business/'
+    | '/workspace/business/$id/manage'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/forgot-password'
@@ -281,6 +303,8 @@ export interface FileRouteTypes {
     | '/admin/monitoring/suspicious-activities'
     | '/admin/monitoring'
     | '/admin/settings'
+    | '/workspace/business'
+    | '/workspace/business/$id/manage'
   id:
     | '__root__'
     | '/(private)'
@@ -307,6 +331,8 @@ export interface FileRouteTypes {
     | '/(private)/admin/monitoring/suspicious-activities'
     | '/(private)/admin/monitoring/'
     | '/(private)/admin/settings/'
+    | '/(private)/workspace/business/'
+    | '/(private)/workspace/business/$id/manage'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -441,6 +467,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof privateAdminMonitoringRouteRouteImport
       parentRoute: typeof privateAdminRouteRoute
     }
+    '/(private)/workspace/business/': {
+      id: '/(private)/workspace/business/'
+      path: '/workspace/business'
+      fullPath: '/workspace/business/'
+      preLoaderRoute: typeof privateWorkspaceBusinessIndexRouteImport
+      parentRoute: typeof privateRouteRoute
+    }
     '/(private)/admin/settings/': {
       id: '/(private)/admin/settings/'
       path: '/settings'
@@ -489,6 +522,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/monitoring/announcements'
       preLoaderRoute: typeof privateAdminMonitoringAnnouncementsRouteImport
       parentRoute: typeof privateAdminMonitoringRouteRoute
+    }
+    '/(private)/workspace/business/$id/manage': {
+      id: '/(private)/workspace/business/$id/manage'
+      path: '/workspace/business/$id/manage'
+      fullPath: '/workspace/business/$id/manage'
+      preLoaderRoute: typeof privateWorkspaceBusinessIdManageRouteImport
+      parentRoute: typeof privateRouteRoute
     }
   }
 }
@@ -544,12 +584,16 @@ interface privateRouteRouteChildren {
   privateAdminRouteRoute: typeof privateAdminRouteRouteWithChildren
   privateUserIndexRoute: typeof privateUserIndexRoute
   privateWorkspaceIndexRoute: typeof privateWorkspaceIndexRoute
+  privateWorkspaceBusinessIndexRoute: typeof privateWorkspaceBusinessIndexRoute
+  privateWorkspaceBusinessIdManageRoute: typeof privateWorkspaceBusinessIdManageRoute
 }
 
 const privateRouteRouteChildren: privateRouteRouteChildren = {
   privateAdminRouteRoute: privateAdminRouteRouteWithChildren,
   privateUserIndexRoute: privateUserIndexRoute,
   privateWorkspaceIndexRoute: privateWorkspaceIndexRoute,
+  privateWorkspaceBusinessIndexRoute: privateWorkspaceBusinessIndexRoute,
+  privateWorkspaceBusinessIdManageRoute: privateWorkspaceBusinessIdManageRoute,
 }
 
 const privateRouteRouteWithChildren = privateRouteRoute._addFileChildren(

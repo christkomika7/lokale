@@ -1,17 +1,53 @@
 import { Elysia, t } from "elysia";
 import { prisma } from "../../lib/prisma";
+import { paginate } from "@lokale/lib/pagination";
+import { isSortable } from "../../lib/helpers";
 
 export const countryRoutes = new Elysia({ prefix: "/countries" })
-  .get("/", async () => {
-    return prisma.country.findMany({
-      include: {
-        currency: true,
-        cities: { orderBy: { name: "asc" } },
-        _count: { select: { cities: true } },
-      },
-      orderBy: { name: "asc" },
-    });
-  })
+  .get(
+    "/",
+    async ({ query }) => {
+      const {
+        page,
+        perPage,
+        search,
+        sortBy,
+        sortOrder,
+        continent,
+        currencyId,
+      } = query;
+
+      const orderField = sortBy && isSortable(sortBy) ? sortBy : "name";
+
+      return await paginate(prisma.country, {
+        page,
+        perPage,
+        search,
+        searchFields: ["name", "code"],
+        where: {
+          ...(continent ? { continent } : {}),
+          ...(currencyId ? { currencyId } : {}),
+        },
+        orderBy: { [orderField]: sortOrder ?? "asc" },
+        include: {
+          currency: true,
+          cities: { orderBy: { name: "asc" } },
+          _count: { select: { cities: true } },
+        },
+      });
+    },
+    {
+      query: t.Object({
+        page: t.Optional(t.Numeric()),
+        perPage: t.Optional(t.Numeric()),
+        search: t.Optional(t.String()),
+        sortBy: t.Optional(t.String()),
+        sortOrder: t.Optional(t.Union([t.Literal("asc"), t.Literal("desc")])),
+        continent: t.Optional(t.String()),
+        currencyId: t.Optional(t.String()),
+      }),
+    },
+  )
 
   .get(
     "/:id",
@@ -95,7 +131,7 @@ export const countryRoutes = new Elysia({ prefix: "/countries" })
 
   .delete(
     "/:id",
-    async ({ params, status }) => {
+    async ({ params }) => {
       const cityCount = await prisma.city.count({
         where: { countryId: params.id },
       });

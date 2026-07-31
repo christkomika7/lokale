@@ -11,13 +11,13 @@ import {
 
 import General from "#/components/dashboard/settings/general";
 import GeoManager from "#/components/dashboard/settings/geomanager";
-import CategoryManager from "#/components/dashboard/settings/category-manager";
 import Security from "#/components/dashboard/settings/security";
 import Emails from "#/components/dashboard/settings/email";
 import Integrations from "#/components/dashboard/settings/integration";
 import Storage from "#/components/dashboard/settings/storage";
 import { Sidebar, type Tab } from "#/components/navigation/sidebar";
 import type { TabKey } from "@lokale/types/navigation";
+import Categories from "#/components/dashboard/settings/categories";
 
 const TABS: Tab[] = [
   { key: "general", label: "Général", icon: Settings },
@@ -37,7 +37,7 @@ function SettingsPage() {
   const content: Record<TabKey, React.ReactNode> = {
     general: <General />,
     geomanager: <GeoManager />,
-    categories: <CategoryManager />,
+    categories: <Categories />,
     security: <Security />,
     emails: <Emails />,
     storage: <Storage />,
